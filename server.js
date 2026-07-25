@@ -46,12 +46,12 @@ initScheduler((event) => {
 
 // --- AUTH API ROUTES ---
 const ADMIN_USER = process.env.ADMIN_USER || 'raghunatha.maharana@gmail.com';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'admin123';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'Raghu@789123*';
 
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
   
-  if ((username === ADMIN_USER || username === 'admin') && (password === ADMIN_PASS || password === 'admin')) {
+  if ((username === ADMIN_USER || username === 'admin') && (password === ADMIN_PASS || password === 'Raghu@789123*')) {
     const token = 'session-' + Date.now() + '-' + Math.random().toString(36).substring(2);
     addLog({
       type: 'AUTH_LOGIN',
