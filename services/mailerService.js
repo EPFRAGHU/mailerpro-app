@@ -53,10 +53,10 @@ function createTransporter(config) {
     };
   }
 
-  // Fast 5-second timeouts for instant response
-  transportOptions.connectionTimeout = 5000;
-  transportOptions.greetingTimeout = 5000;
-  transportOptions.socketTimeout = 5000;
+  // 15-second timeouts for cloud server TLS handshakes
+  transportOptions.connectionTimeout = 15000;
+  transportOptions.greetingTimeout = 15000;
+  transportOptions.socketTimeout = 15000;
 
   return nodemailer.createTransport(transportOptions);
 }
@@ -73,14 +73,14 @@ function replacePlaceholders(templateStr, data = {}) {
 }
 
 /**
- * Verifies SMTP credentials with 5-second strict timeout.
+ * Verifies SMTP credentials with 15-second timeout for cloud servers.
  */
 async function testSmtpConnection(config) {
   try {
     const transporter = createTransporter(config);
     const verifyPromise = transporter.verify();
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timed out after 5 seconds. Check SMTP host/port/credentials.')), 5000)
+      setTimeout(() => reject(new Error('Connection timed out after 15 seconds. Check Brevo key or network.')), 15000)
     );
     await Promise.race([verifyPromise, timeoutPromise]);
     return { success: true, message: 'SMTP Connection verified successfully!' };
