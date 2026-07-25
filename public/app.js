@@ -36,14 +36,15 @@ function initAppComponents() {
   }
 
   const smtpUserInput = document.getElementById('smtpUser');
-  if (smtpUserInput && !smtpUserInput.value) {
-    smtpUserInput.value = 'b32ede001@smtp-brevo.com';
+  if (smtpUserInput) {
+    const savedUser = localStorage.getItem('mailler_smtp_user') || 'b32ede001@smtp-brevo.com';
+    smtpUserInput.value = savedUser;
   }
 
   const smtpPassInput = document.getElementById('smtpPass');
-  if (smtpPassInput && !smtpPassInput.value) {
-    const savedPass = localStorage.getItem('mailler_smtp_pass') || 'xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f';
-    smtpPassInput.value = savedPass;
+  if (smtpPassInput) {
+    const savedPass = localStorage.getItem('mailler_smtp_pass') || '';
+    if (savedPass) smtpPassInput.value = savedPass;
   }
 
   const fromEmailInput = document.getElementById('fromEmail');
@@ -61,6 +62,35 @@ function initAppComponents() {
   loadLogs();
 
   // Automatically connect & verify SMTP on login
+  autoVerifySmtp();
+}
+
+/**
+ * Save SMTP Credentials & Key to Local Browser Storage
+ */
+function saveSmtpCredentials() {
+  const user = document.getElementById('smtpUser').value.trim();
+  const pass = document.getElementById('smtpPass').value.trim();
+  const alertBox = document.getElementById('smtpTestAlert');
+
+  if (!pass) {
+    if (alertBox) {
+      alertBox.className = 'alert alert-warning mt-3';
+      alertBox.textContent = 'Please paste your SMTP Password / Key before saving.';
+      alertBox.classList.remove('d-none');
+    }
+    return;
+  }
+
+  localStorage.setItem('mailler_smtp_user', user);
+  localStorage.setItem('mailler_smtp_pass', pass);
+
+  if (alertBox) {
+    alertBox.className = 'alert alert-success mt-3';
+    alertBox.innerHTML = '<i class="fas fa-check-circle me-2"></i>SMTP Credentials & Key saved permanently to your browser!';
+    alertBox.classList.remove('d-none');
+  }
+
   autoVerifySmtp();
 }
 

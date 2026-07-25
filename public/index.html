@@ -174,17 +174,22 @@
                 <div class="mb-3">
                   <label class="form-label text-muted small fw-semibold">Password / App Password</label>
                   <div class="input-group">
-                    <input type="password" id="smtpPass" class="form-control custom-input" value="xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f" placeholder="xsmtpsib-...">
+                    <input type="password" id="smtpPass" class="form-control custom-input" placeholder="xsmtpsib-YOUR_BREVO_KEY">
                     <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="togglePassVisibility()">
                       <i class="fas fa-eye" id="passEyeIcon"></i>
                     </button>
                   </div>
-                  <div class="form-text text-muted extra-small">Brevo SMTP Key pre-configured.</div>
+                  <div class="form-text text-muted extra-small">Paste non-expiring Brevo SMTP Key here.</div>
                 </div>
 
-                <button class="btn btn-outline-primary w-100 py-2 rounded-pill fw-semibold" id="btnTestSmtp" onclick="testSmtp()">
-                  <i class="fas fa-plug me-2"></i>Test SMTP Connection
-                </button>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-outline-primary flex-grow-1 py-2 rounded-pill fw-semibold" id="btnTestSmtp" onclick="testSmtp()">
+                    <i class="fas fa-plug me-2"></i>Test Connection
+                  </button>
+                  <button class="btn btn-success rounded-pill px-3 py-2 fw-semibold text-white" id="btnSaveSmtp" onclick="saveSmtpCredentials()">
+                    <i class="fas fa-save me-1"></i>Save Key
+                  </button>
+                </div>
                 
                 <div id="smtpTestAlert" class="mt-3 d-none"></div>
               </div>
