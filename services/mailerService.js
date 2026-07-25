@@ -12,16 +12,14 @@ function createTransporter(config) {
   if (provider === 'gmail') {
     transportOptions = {
       service: 'gmail',
-      auth: {
-        user: user,
-        pass: pass
-      }
+      auth: { user, pass }
     };
   } else if (provider === 'brevo') {
+    const selectedPort = parseInt(port, 10) || 587;
     transportOptions = {
       host: 'smtp-relay.brevo.com',
-      port: 465,
-      secure: true,
+      port: selectedPort,
+      secure: selectedPort === 465,
       auth: { user, pass }
     };
   } else if (provider === 'resend') {
@@ -29,10 +27,7 @@ function createTransporter(config) {
       host: 'smtp.resend.com',
       port: 465,
       secure: true,
-      auth: {
-        user: 'resend',
-        pass: pass
-      }
+      auth: { user: 'resend', pass }
     };
   } else if (provider === 'mailtrap') {
     transportOptions = {
@@ -47,16 +42,14 @@ function createTransporter(config) {
       port: parseInt(port, 10) || 587,
       secure: Boolean(secure),
       auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false
-      }
+      tls: { rejectUnauthorized: false }
     };
   }
 
-  // 15-second timeouts for cloud server TLS handshakes
-  transportOptions.connectionTimeout = 15000;
-  transportOptions.greetingTimeout = 15000;
-  transportOptions.socketTimeout = 15000;
+  // 8-second timeout per port attempt
+  transportOptions.connectionTimeout = 8000;
+  transportOptions.greetingTimeout = 8000;
+  transportOptions.socketTimeout = 8000;
 
   return nodemailer.createTransport(transportOptions);
 }
@@ -73,20 +66,29 @@ function replacePlaceholders(templateStr, data = {}) {
 }
 
 /**
- * Verifies SMTP credentials with 15-second timeout for cloud servers.
+ * Verifies SMTP credentials with multi-port auto-failover (587, 2525, 465).
  */
 async function testSmtpConnection(config) {
-  try {
-    const transporter = createTransporter(config);
-    const verifyPromise = transporter.verify();
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timed out after 15 seconds. Check Brevo key or network.')), 15000)
-    );
-    await Promise.race([verifyPromise, timeoutPromise]);
-    return { success: true, message: 'SMTP Connection verified successfully!' };
-  } catch (error) {
-    return { success: false, message: error.message || 'Failed to connect to SMTP server.' };
+  const portsToTry = config.provider === 'brevo' ? [587, 2525, 465] : [config.port || 587];
+  let lastError = null;
+
+  for (const p of portsToTry) {
+    try {
+      const testConfig = { ...config, port: p };
+      const transporter = createTransporter(testConfig);
+      const verifyPromise = transporter.verify();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Port ${p} timed out`)), 7000)
+      );
+      await Promise.race([verifyPromise, timeoutPromise]);
+      config.port = p;
+      return { success: true, message: `SMTP Connection verified successfully (via Port ${p})!` };
+    } catch (err) {
+      lastError = err;
+    }
   }
+
+  return { success: false, message: lastError?.message || 'Failed to connect to SMTP server.' };
 }
 
 /**
