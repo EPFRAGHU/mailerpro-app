@@ -157,6 +157,10 @@ function toggleLoginPass() {
 function handleLogout() {
   localStorage.removeItem('mailler_token');
   sessionStorage.removeItem('mailler_token');
+  const userIn = document.getElementById('loginUsername');
+  const passIn = document.getElementById('loginPassword');
+  if (userIn) userIn.value = '';
+  if (passIn) passIn.value = '';
   document.getElementById('mainAppWrapper').classList.add('d-none');
   document.getElementById('loginScreenContainer').classList.remove('d-none');
 }

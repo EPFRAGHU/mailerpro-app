@@ -35,12 +35,12 @@
 
       <div id="loginAlert" class="alert alert-danger d-none extra-small text-center mb-3"></div>
 
-      <form id="loginForm" onsubmit="handleLogin(event)">
+      <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
         <div class="mb-3">
           <label class="form-label text-muted small fw-semibold">User Email / Login</label>
           <div class="input-group">
             <span class="input-group-text custom-input-addon"><i class="fas fa-envelope text-info"></i></span>
-            <input type="text" id="loginUsername" class="form-control custom-input" value="" required placeholder="Enter login email or username">
+            <input type="text" id="loginUsername" class="form-control custom-input" value="" required placeholder="Enter login email or username" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
           </div>
         </div>
 
@@ -48,7 +48,7 @@
           <label class="form-label text-muted small fw-semibold">Password</label>
           <div class="input-group">
             <span class="input-group-text custom-input-addon"><i class="fas fa-lock text-warning"></i></span>
-            <input type="password" id="loginPassword" class="form-control custom-input" value="" required placeholder="Enter password">
+            <input type="password" id="loginPassword" class="form-control custom-input" value="" required placeholder="Enter password" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
             <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="toggleLoginPass()">
               <i class="fas fa-eye" id="loginPassEye"></i>
             </button>
