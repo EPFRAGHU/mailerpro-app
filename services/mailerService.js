@@ -20,8 +20,8 @@ function createTransporter(config) {
   } else if (provider === 'brevo') {
     transportOptions = {
       host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false,
+      port: 465,
+      secure: true,
       auth: { user, pass }
     };
   } else if (provider === 'resend') {
