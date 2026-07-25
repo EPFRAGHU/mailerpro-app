@@ -42,7 +42,8 @@ function initAppComponents() {
 
   const smtpPassInput = document.getElementById('smtpPass');
   if (smtpPassInput && !smtpPassInput.value) {
-    smtpPassInput.value = 'xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f';
+    const savedPass = localStorage.getItem('mailler_smtp_pass') || 'xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f';
+    smtpPassInput.value = savedPass;
   }
 
   const fromEmailInput = document.getElementById('fromEmail');
@@ -52,12 +53,48 @@ function initAppComponents() {
 
   const fromNameInput = document.getElementById('fromName');
   if (fromNameInput && !fromNameInput.value) {
-    fromNameInput.value = 'Raghunatha Maharana';
+    fromNameInput.value = 'District Office Cuttack - EPFO';
   }
 
   renderVariableChips();
   loadSchedules();
   loadLogs();
+
+  // Automatically connect & verify SMTP on login
+  autoVerifySmtp();
+}
+
+/**
+ * Auto-verify SMTP connection without user click
+ */
+async function autoVerifySmtp() {
+  const config = getSmtpConfigFromForm();
+  const badge = document.getElementById('smtpStatusBadge');
+  
+  if (config.user && config.pass) {
+    if (badge) {
+      badge.className = 'status-badge status-offline';
+      const textEl = badge.querySelector('.status-text');
+      if (textEl) textEl.textContent = 'Connecting SMTP...';
+    }
+    
+    try {
+      const res = await fetch('/api/smtp/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        updateSmtpStatus(true, 'SMTP Connected');
+      } else {
+        updateSmtpStatus(false, data.message || 'SMTP Not Connected');
+      }
+    } catch (err) {
+      updateSmtpStatus(false, 'SMTP Offline');
+    }
+  }
 }
 
 /**
