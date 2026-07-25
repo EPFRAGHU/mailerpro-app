@@ -280,8 +280,10 @@ function onSmtpProviderChange() {
     } else if (provider === 'brevo') {
       if (userLabel) userLabel.textContent = 'Brevo SMTP Login';
       if (passLabel) passLabel.textContent = 'Brevo SMTP Key (xsmtpsib-...)';
-      userInput.value = 'b32ede001@smtp-brevo.com';
-      passInput.value = 'xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f';
+      const savedUser = localStorage.getItem('mailler_smtp_user') || 'b32ede001@smtp-brevo.com';
+      const savedPass = localStorage.getItem('mailler_smtp_pass') || '';
+      userInput.value = savedUser;
+      passInput.value = savedPass;
       userInput.placeholder = 'b32ede001@smtp-brevo.com';
       passInput.placeholder = 'xsmtpsib-xxxxxxxxxxxxxxxxxxxx';
     } else if (provider === 'resend') {
