@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mailler Pro - Bulk Email & Daily Scheduler</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome & Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark text-light">
+
+  <!-- LOGIN SCREEN CONTAINER -->
+  <div id="loginScreenContainer" class="d-flex align-items-center justify-content-center min-vh-100 py-5">
+    <div class="glass-card login-card p-4 p-md-5 shadow-lg position-relative" style="max-width: 440px; width: 90%;">
+      
+      <div class="text-center mb-4">
+        <div class="brand-icon mx-auto mb-3" style="width: 54px; height: 54px;">
+          <i class="fas fa-paper-plane text-white fs-3"></i>
+        </div>
+        <h3 class="fw-bold m-0">Mailler<span class="text-gradient">PRO</span></h3>
+        <p class="text-muted small mt-1">Security Authentication Portal</p>
+      </div>
+
+      <div id="loginAlert" class="alert alert-danger d-none extra-small text-center mb-3"></div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="mb-3">
+          <label class="form-label text-muted small fw-semibold">User Email / Login</label>
+          <div class="input-group">
+            <span class="input-group-text custom-input-addon"><i class="fas fa-envelope text-info"></i></span>
+            <input type="text" id="loginUsername" class="form-control custom-input" value="raghunatha.maharana@gmail.com" required placeholder="admin@domain.com">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label text-muted small fw-semibold">Password</label>
+          <div class="input-group">
+            <span class="input-group-text custom-input-addon"><i class="fas fa-lock text-warning"></i></span>
+            <input type="password" id="loginPassword" class="form-control custom-input" value="admin123" required placeholder="••••••••">
+            <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="toggleLoginPass()">
+              <i class="fas fa-eye" id="loginPassEye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btnLogin" class="btn btn-primary btn-gradient w-100 py-3 rounded-pill fw-bold fs-6 shadow-lg mb-3">
+          <i class="fas fa-shield-alt me-2"></i>Sign In to MaillerPRO
+        </button>
+      </form>
+
+      <div class="text-center mt-3 p-2 bg-dark bg-opacity-40 rounded border border-secondary border-opacity-20 extra-small text-muted">
+        <i class="fas fa-key text-warning me-1"></i> <strong>Security Login:</strong><br>
+        User: <code>raghunatha.maharana@gmail.com</code> | Pass: <code>admin123</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP WRAPPER (PROTECTED AFTER LOGIN) -->
+  <div id="mainAppWrapper" class="d-none">
+
+  <!-- Header / Navbar -->
+  <nav class="navbar navbar-expand-lg sticky-top custom-navbar">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <div class="brand-icon">
+          <i class="fas fa-paper-plane text-white"></i>
+        </div>
+        <span class="fw-bold tracking-tight text-white fs-4">Mailler<span class="text-gradient">PRO</span></span>
+      </a>
+      
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <!-- Theme Switcher -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle text-light rounded-pill px-3 py-1 border-opacity-20 d-flex align-items-center gap-2" type="button" id="themeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-palette text-warning"></i> <span id="currentThemeLabel" class="fw-semibold">Cyber Violet</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" aria-labelledby="themeDropdown">
+            <li><button class="dropdown-item d-flex align-items-center gap-2" onclick="setTheme('violet')"><i class="fas fa-circle" style="color:#a855f7;"></i>Cyber Violet & Cyan</button></li>
+            <li><button class="dropdown-item d-flex align-items-center gap-2" onclick="setTheme('emerald')"><i class="fas fa-circle text-success"></i>Emerald Mint & Teal</button></li>
+            <li><button class="dropdown-item d-flex align-items-center gap-2" onclick="setTheme('amber')"><i class="fas fa-circle text-warning"></i>Sunset Amber & Gold</button></li>
+            <li><button class="dropdown-item d-flex align-items-center gap-2" onclick="setTheme('light')"><i class="fas fa-sun text-info"></i>Light Crystal</button></li>
+          </ul>
+        </div>
+
+        <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 d-flex align-items-center gap-2" onclick="handleLogout()" title="Lock App">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+
+        <div id="smtpStatusBadge" class="status-badge status-offline">
+          <span class="status-dot"></span>
+          <span class="status-text">SMTP Not Tested</span>
+        </div>
+
+        <ul class="nav nav-pills custom-nav-pills" id="mainTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="composer-tab" data-bs-toggle="tab" data-bs-target="#composer-pane" type="button"><i class="fas fa-edit me-2"></i>Composer</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules-pane" type="button" onclick="loadSchedules()"><i class="fas fa-clock me-2"></i>Daily Schedules <span id="scheduleBadge" class="badge bg-primary rounded-pill ms-1">0</span></button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" onclick="loadLogs()"><i class="fas fa-terminal me-2"></i>Live Logs</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="container-fluid px-4 py-4">
+    <div class="tab-content" id="mainTabContent">
+      
+      <!-- COMPOSER & SMTP PANE -->
+      <div class="tab-pane fade show active" id="composer-pane" role="tabpanel">
+        <div class="row g-4">
+          
+          <!-- LEFT COLUMN: SMTP & Recipients -->
+          <div class="col-lg-4">
+            
+            <!-- 1. SMTP Provider Config Card -->
+            <div class="glass-card mb-4">
+              <div class="card-header-custom d-flex align-items-center justify-content-between">
+                <h5 class="m-0 fw-bold"><i class="fas fa-server theme-icon-glow me-2"></i>SMTP Credentials</h5>
+                <div class="d-flex gap-1">
+                  <button class="btn btn-sm btn-outline-info text-nowrap" data-bs-toggle="modal" data-bs-target="#brevoGuideModal">
+                    <i class="fas fa-bolt text-warning me-1"></i>Brevo Guide
+                  </button>
+                  <button class="btn btn-sm btn-outline-secondary text-nowrap" data-bs-toggle="modal" data-bs-target="#gmailGuideModal">
+                    <i class="fab fa-google me-1"></i>Gmail
+                  </button>
+                </div>
+              </div>
+              <div class="card-body-custom">
+                <div class="mb-3">
+                  <label class="form-label text-muted small fw-semibold">SMTP Service Preset</label>
+                  <select id="smtpProvider" class="form-select custom-input" onchange="onSmtpProviderChange()">
+                    <option value="gmail" selected>Gmail SMTP (App Password)</option>
+                    <option value="brevo">Brevo / Sendinblue (300 free/day)</option>
+                    <option value="resend">Resend SMTP (3,000 free/month)</option>
+                    <option value="mailtrap">Mailtrap Sandbox (Testing)</option>
+                    <option value="custom">Custom SMTP Server</option>
+                  </select>
+                </div>
+
+                <div id="customSmtpFields" class="d-none">
+                  <div class="row g-2 mb-3">
+                    <div class="col-8">
+                      <label class="form-label text-muted small fw-semibold">SMTP Host</label>
+                      <input type="text" id="smtpHost" class="form-input custom-input" placeholder="smtp.domain.com">
+                    </div>
+                    <div class="col-4">
+                      <label class="form-label text-muted small fw-semibold">Port</label>
+                      <input type="number" id="smtpPort" class="form-input custom-input" placeholder="587">
+                    </div>
+                  </div>
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="smtpSecure">
+                    <label class="form-check-label text-muted small" for="smtpSecure">Use SSL/TLS (Port 465)</label>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label text-muted small fw-semibold">Email / SMTP Username</label>
+                  <input type="email" id="smtpUser" class="form-control custom-input" value="b32ede001@smtp-brevo.com" placeholder="b32ede001@smtp-brevo.com">
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label text-muted small fw-semibold">Password / App Password</label>
+                  <div class="input-group">
+                    <input type="password" id="smtpPass" class="form-control custom-input" value="xsmtpsib-87b5c59b240d7432322ba9994935df584963f26b2f3323b8894e9204a901e4b7-WYYDEDcjGBlTOK7f" placeholder="xsmtpsib-...">
+                    <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="togglePassVisibility()">
+                      <i class="fas fa-eye" id="passEyeIcon"></i>
+                    </button>
+                  </div>
+                  <div class="form-text text-muted extra-small">Brevo SMTP Key pre-configured.</div>
+                </div>
+
+                <button class="btn btn-outline-primary w-100 py-2 rounded-pill fw-semibold" id="btnTestSmtp" onclick="testSmtp()">
+                  <i class="fas fa-plug me-2"></i>Test SMTP Connection
+                </button>
+                
+                <div id="smtpTestAlert" class="mt-3 d-none"></div>
+              </div>
+            </div>
+
+            <!-- 2. Recipients & CSV Import Card -->
+            <div class="glass-card">
+              <div class="card-header-custom d-flex align-items-center justify-content-between">
+                <h5 class="m-0 fw-bold"><i class="fas fa-users theme-icon-glow me-2"></i>Recipients List</h5>
+                <span id="recipientCountBadge" class="badge bg-secondary rounded-pill">0 parsed</span>
+              </div>
+              <div class="card-body-custom">
+                
+                <!-- Recipient Mode Switcher -->
+                <ul class="nav nav-segment mb-3" id="recipientModeTabs">
+                  <li class="nav-item flex-fill">
+                    <button class="nav-link w-100 active" data-bs-toggle="pill" data-bs-target="#tab-csv"><i class="fas fa-file-csv me-1"></i>CSV Upload</button>
+                  </li>
+                  <li class="nav-item flex-fill">
+                    <button class="nav-link w-100" data-bs-toggle="pill" data-bs-target="#tab-manual"><i class="fas fa-font me-1"></i>Manual List</button>
+                  </li>
+                </ul>
+
+                <div class="tab-content">
+                  <!-- CSV Tab -->
+                  <div class="tab-pane fade show active" id="tab-csv">
+                    <div class="upload-dropzone p-3 text-center mb-3" id="csvDropzone" onclick="document.getElementById('csvFileInput').click()">
+                      <i class="fas fa-cloud-upload-alt fs-2 text-primary mb-2"></i>
+                      <p class="mb-1 text-light fw-medium">Click or Drag CSV / Excel file here</p>
+                      <span class="text-muted extra-small">Headers: <code>email</code>, <code>name</code>, <code>company</code>, etc.</span>
+                      <input type="file" id="csvFileInput" accept=".csv,.txt" class="d-none" onchange="handleCsvFile(this.files[0])">
+                    </div>
+                  </div>
+
+                  <!-- Manual Tab -->
+                  <div class="tab-pane fade" id="tab-manual">
+                    <textarea id="manualRecipientsInput" class="form-control custom-input font-monospace" rows="4" placeholder="Enter emails separated by newline or commas:&#10;john@example.com, John, Acme Corp&#10;sarah@example.com, Sarah, Globex" oninput="parseManualRecipients()"></textarea>
+                  </div>
+                </div>
+
+                <!-- Variable Chips Display -->
+                <div id="placeholdersContainer" class="mb-3 d-none">
+                  <label class="form-label text-muted extra-small fw-bold">AVAILABLE TEMPLATE VARS (Click to insert):</label>
+                  <div id="variableChips" class="d-flex flex-wrap gap-1"></div>
+                </div>
+
+                <!-- Recipient Preview List -->
+                <div id="recipientsPreviewBox" class="recipient-preview-list d-none"></div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: Mail Composer & Dispatch -->
+          <div class="col-lg-8">
+            <div class="glass-card">
+              <div class="card-header-custom d-flex align-items-center justify-content-between">
+                <h5 class="m-0 fw-bold"><i class="fas fa-paper-plane theme-icon-glow me-2"></i>Mail Composer</h5>
+                <div class="d-flex gap-2">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-info dropdown-toggle text-nowrap rounded-pill px-3" type="button" id="templateMenuBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fas fa-magic me-1"></i>HTML Templates
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" aria-labelledby="templateMenuBtn">
+                      <li><button class="dropdown-item" onclick="loadHtmlTemplate('newsletter')"><i class="fas fa-newspaper text-info me-2"></i>Modern Newsletter</button></li>
+                      <li><button class="dropdown-item" onclick="loadHtmlTemplate('outreach')"><i class="fas fa-briefcase text-success me-2"></i>B2B Sales Outreach</button></li>
+                      <li><button class="dropdown-item" onclick="loadHtmlTemplate('announcement')"><i class="fas fa-rocket text-warning me-2"></i>Product Launch</button></li>
+                      <li><button class="dropdown-item" onclick="loadHtmlTemplate('event')"><i class="fas fa-calendar-check me-2" style="color:#a855f7;"></i>Event / Webinar</button></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="card-body-custom">
+                
+                <!-- From Name, Email & Reply-To -->
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Sender Name (From Name)</label>
+                    <input type="text" id="fromName" class="form-control custom-input" value="District Office Cuttack - EPFO" placeholder="e.g. District Office Cuttack">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Sender Email (From Email)</label>
+                    <input type="email" id="fromEmail" class="form-control custom-input" value="raghunatha.maharana@gmail.com" placeholder="e.g. raghunatha.maharana@gmail.com">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label text-muted small fw-semibold">Reply-To Email</label>
+                    <input type="email" id="replyToEmail" class="form-control custom-input" value="do.cuttack@epfindia.gov.in" placeholder="e.g. do.cuttack@epfindia.gov.in">
+                  </div>
+                </div>
+
+                <!-- Subject -->
+                <div class="mb-3">
+                  <label class="form-label text-muted small fw-semibold">Subject Line</label>
+                  <input type="text" id="emailSubject" class="form-control custom-input" placeholder="e.g. Hello {{name}}, exclusive update for {{company}}">
+                </div>
+
+                <!-- Body HTML / Plain Text Editor -->
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label text-muted small fw-semibold m-0">Email Message Body (HTML / Text)</label>
+                    <div class="btn-group btn-group-sm">
+                      <button type="button" class="btn btn-outline-secondary active" id="btnEditTab" onclick="switchBodyMode('edit')">Edit</button>
+                      <button type="button" class="btn btn-outline-secondary" id="btnPreviewTab" onclick="switchBodyMode('preview')">Live Preview</button>
+                    </div>
+                  </div>
+
+                  <div id="bodyEditContainer">
+                    <textarea id="emailBody" class="form-control custom-input font-monospace" rows="10" placeholder="Hi {{name}},&#10;&#10;We are excited to share an update for {{company}}...&#10;&#10;Best regards,&#10;Team"></textarea>
+                  </div>
+
+                  <div id="bodyPreviewContainer" class="email-preview-frame d-none">
+                    <div id="liveBodyPreview" class="p-3 bg-white text-dark rounded min-h-200"></div>
+                  </div>
+                </div>
+
+                <!-- Attachments -->
+                <div class="mb-4">
+                  <label class="form-label text-muted small fw-semibold"><i class="fas fa-paperclip me-1"></i>Attachments</label>
+                  <div class="d-flex align-items-center gap-3">
+                    <input type="file" id="attachmentInput" multiple class="form-control custom-input" onchange="renderAttachmentChips()">
+                  </div>
+                  <div id="attachmentChips" class="d-flex flex-wrap gap-2 mt-2"></div>
+                </div>
+
+                <hr class="border-secondary my-4">
+
+                <!-- Sending & Scheduling Panel -->
+                <div class="row align-items-center g-3">
+                  <div class="col-md-5">
+                    <label class="form-label text-muted small fw-semibold mb-1">Throttling Delay (sec between emails)</label>
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="range" class="form-range flex-grow-1" id="throttleDelay" min="0" max="10" step="1" value="1" oninput="document.getElementById('delayVal').innerText = this.value + 's'">
+                      <span id="delayVal" class="badge bg-secondary">1s</span>
+                    </div>
+                  </div>
+                  <div class="col-md-7 d-flex justify-content-end gap-3">
+                    <button class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold" onclick="openScheduleModal()">
+                      <i class="fas fa-calendar-alt me-2"></i>Schedule Daily
+                    </button>
+                    <button class="btn btn-primary rounded-pill px-5 py-2 fw-bold text-white shadow-lg btn-gradient" id="btnSendNow" onclick="sendNow()">
+                      <i class="fas fa-rocket me-2"></i>Send Now
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="mt-4 d-none">
+                  <div class="d-flex justify-content-between mb-1 small">
+                    <span id="progressText" class="fw-semibold">Sending emails...</span>
+                    <span id="progressCount" class="font-monospace">0 / 0</span>
+                  </div>
+                  <div class="progress progress-custom">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DAILY SCHEDULES PANE -->
+      <div class="tab-pane fade" id="schedules-pane" role="tabpanel">
+        <div class="glass-card">
+          <div class="card-header-custom d-flex align-items-center justify-content-between">
+            <h5 class="m-0 fw-bold"><i class="fas fa-clock theme-icon-glow me-2"></i>Active Daily Email Schedules</h5>
+            <button class="btn btn-primary rounded-pill btn-sm px-3" onclick="openScheduleModal()">
+              <i class="fas fa-plus me-1"></i>Create New Schedule
+            </button>
+          </div>
+          <div class="card-body-custom">
+            <div class="table-responsive">
+              <table class="table table-dark table-hover align-middle custom-table">
+                <thead>
+                  <tr>
+                    <th>Schedule Name</th>
+                    <th>Daily Time</th>
+                    <th>Recipients</th>
+                    <th>Subject</th>
+                    <th>Last Run</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="schedulesTableBody">
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">Loading active schedules...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE LOGS PANE -->
+      <div class="tab-pane fade" id="logs-pane" role="tabpanel">
+        <div class="glass-card">
+          <div class="card-header-custom d-flex align-items-center justify-content-between">
+            <h5 class="m-0 fw-bold"><i class="fas fa-terminal theme-icon-glow me-2"></i>Real-time Transmission Logs</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadLogs()"><i class="fas fa-sync-alt me-1"></i>Refresh Logs</button>
+          </div>
+          <div class="card-body-custom">
+            <div id="logsConsole" class="terminal-box font-monospace">
+              <div class="text-muted">[System Ready] Waiting for transmission events...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL: GMAIL APP PASSWORD GUIDE -->
+  <div class="modal fade" id="gmailGuideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content glass-modal text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fab fa-google text-danger me-2"></i>How to get a Gmail App Password</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>Gmail requires an <strong>App Password</strong> (a 16-character code) instead of your regular password to send automated SMTP emails securely.</p>
+          <ol class="lh-lg">
+            <li>Go to your <a href="https://myaccount.google.com/security" target="_blank" class="text-info">Google Account Security Settings</a>.</li>
+            <li>Make sure <strong>2-Step Verification</strong> is enabled under <em>"How you sign in to Google"</em>.</li>
+            <li>Search for <strong>"App passwords"</strong> in the top search bar (or go to <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-info">myaccount.google.com/apppasswords</a>).</li>
+            <li>Type an app name (e.g. <code>Mailler App</code>) and click <strong>Create</strong>.</li>
+            <li>Copy the 16-letter code generated and paste it into the <strong>Password / App Password</strong> field in Mailler!</li>
+          </ol>
+          <div class="alert alert-info border-0 bg-opacity-20 bg-info text-info small">
+            <i class="fas fa-info-circle me-1"></i> Tip: You can also use free SMTP providers like <strong>Brevo (300 free emails/day)</strong> or <strong>Resend</strong> without App Password setup!
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SCHEDULE DAILY MAIL -->
+  <div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-modal text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fas fa-clock text-primary me-2"></i>Schedule Daily Email</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Schedule Campaign Name</label>
+            <input type="text" id="schName" class="form-control custom-input" placeholder="e.g. Daily Morning Newsletter">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Daily Execution Time (24h Format)</label>
+            <input type="time" id="schTime" class="form-control custom-input" value="09:00">
+            <div class="form-text text-muted extra-small">This campaign will run every day automatically at this time.</div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary rounded-pill btn-gradient px-4" onclick="confirmSchedule()">Save & Activate Schedule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BREVO GUIDE -->
+  <div class="modal fade" id="brevoGuideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content glass-modal text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fas fa-bolt text-warning me-2"></i>How to get your Free Brevo SMTP Key</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Brevo</strong> (formerly Sendinblue) provides <strong>300 FREE emails every day</strong> with great inbox deliverability and requires no 2FA app password hassle.</p>
+          <ol class="lh-lg">
+            <li>Create a free account at <a href="https://www.brevo.com" target="_blank" class="text-info">brevo.com</a>.</li>
+            <li>In your Brevo dashboard, click your profile name at the top right and select <strong>SMTP & API</strong>.</li>
+            <li>Click the <strong>SMTP</strong> tab and click <strong>Generate a new SMTP key</strong>.</li>
+            <li>Give it a name (e.g. <code>Mailler App</code>) and copy the generated Key starting with <code>xsmtpsib-...</code>.</li>
+            <li>Paste your <strong>Brevo Account Email</strong> into <em>"Email / SMTP Username"</em> and your <strong>SMTP Key</strong> into <em>"Password / App Password"</em>.</li>
+          </ol>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- End #mainAppWrapper -->
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Custom Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
