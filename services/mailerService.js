@@ -14,7 +14,7 @@ function createTransporter(config) {
       service: 'gmail',
       auth: {
         user: user,
-        pass: pass // Requires Gmail App Password (not standard account password)
+        pass: pass
       }
     };
   } else if (provider === 'brevo') {
@@ -53,6 +53,11 @@ function createTransporter(config) {
     };
   }
 
+  // Fast 5-second timeouts for instant response
+  transportOptions.connectionTimeout = 5000;
+  transportOptions.greetingTimeout = 5000;
+  transportOptions.socketTimeout = 5000;
+
   return nodemailer.createTransport(transportOptions);
 }
 
@@ -68,12 +73,16 @@ function replacePlaceholders(templateStr, data = {}) {
 }
 
 /**
- * Verifies SMTP credentials.
+ * Verifies SMTP credentials with 5-second strict timeout.
  */
 async function testSmtpConnection(config) {
   try {
     const transporter = createTransporter(config);
-    await transporter.verify();
+    const verifyPromise = transporter.verify();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timed out after 5 seconds. Check SMTP host/port/credentials.')), 5000)
+    );
+    await Promise.race([verifyPromise, timeoutPromise]);
     return { success: true, message: 'SMTP Connection verified successfully!' };
   } catch (error) {
     return { success: false, message: error.message || 'Failed to connect to SMTP server.' };
