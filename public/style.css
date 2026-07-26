@@ -427,24 +427,36 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   color: var(--text-main);
 }
 
-/* Custom Table */
-.custom-table {
-  border-color: var(--border-card) !important;
+/* Custom Table - Dark Glass Theme */
+.custom-table,
+.custom-table > :not(caption) > * > * {
+  background-color: transparent !important;
+  background: transparent !important;
+  color: var(--text-main) !important;
+  border-bottom-color: var(--border-card) !important;
 }
 
 .custom-table th {
+  background-color: var(--input-bg) !important;
   background: var(--input-bg) !important;
   color: var(--text-label) !important;
   font-weight: 700 !important;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   padding: 14px 16px;
+  border-bottom: 1px solid var(--border-card) !important;
 }
 
 .custom-table td {
   padding: 14px 16px;
-  color: var(--text-main);
+  color: var(--text-main) !important;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-card) !important;
+}
+
+.custom-table tbody tr:hover > * {
+  background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Terminal Log Console */

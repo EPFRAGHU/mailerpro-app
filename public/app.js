@@ -1253,28 +1253,28 @@ async function loadUsers() {
 
       tbody.innerHTML = data.users.map(u => `
         <tr>
-          <td class="fw-semibold text-light"><i class="fas fa-user-circle me-2 text-info"></i>${u.name}</td>
-          <td><code class="text-light">${u.email}</code></td>
+          <td class="fw-bold text-white"><i class="fas fa-user-circle me-2 text-info fs-5 align-middle"></i>${u.name}</td>
+          <td><code class="text-info bg-dark bg-opacity-75 px-2 py-1 rounded border border-secondary font-monospace fs-6">${u.email}</code></td>
           <td>
-            <span class="badge ${u.role === 'superadmin' ? 'bg-warning text-dark' : 'bg-primary'} fw-bold">
+            <span class="badge ${u.role === 'superadmin' ? 'bg-warning text-dark' : 'bg-primary'} fw-bold px-2 py-1">
               ${u.role === 'superadmin' ? 'Superadmin Owner' : 'Colleague'}
             </span>
           </td>
           <td>
-            <span class="badge ${u.active ? 'bg-success' : 'bg-danger'}">
+            <span class="badge ${u.active ? 'bg-success' : 'bg-danger'} px-2 py-1">
               ${u.active ? 'Active' : 'Disabled'}
             </span>
           </td>
-          <td class="small text-muted">${new Date(u.createdAt).toLocaleDateString()}</td>
+          <td class="small text-light fw-semibold">${new Date(u.createdAt).toLocaleDateString()}</td>
           <td class="text-end">
             ${u.role !== 'superadmin' ? `
-              <button class="btn btn-sm btn-outline-warning me-1" onclick="toggleUserActive('${u.id}', ${!u.active})" title="Toggle Active/Disable">
+              <button class="btn btn-sm btn-outline-warning me-1 rounded-pill" onclick="toggleUserActive('${u.id}', ${!u.active})" title="Toggle Active/Disable">
                 <i class="fas ${u.active ? 'fa-user-slash' : 'fa-user-check'}"></i>
               </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount('${u.id}')" title="Delete Colleague Account">
+              <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteUserAccount('${u.id}')" title="Delete Colleague Account">
                 <i class="fas fa-trash-alt"></i>
               </button>
-            ` : '<span class="small text-muted">Primary Superadmin</span>'}
+            ` : '<span class="badge bg-secondary text-light border border-secondary px-2 py-1">Primary Superadmin</span>'}
           </td>
         </tr>
       `).join('');
@@ -1378,17 +1378,17 @@ async function loadAuditLogs() {
 
       tbody.innerHTML = data.logs.map(l => `
         <tr>
-          <td class="small text-muted">${new Date(l.timestamp).toLocaleString()}</td>
-          <td class="fw-semibold text-info"><i class="fas fa-user-circle me-1"></i>${l.userName} (${l.userEmail})</td>
-          <td><code class="text-light">${l.toEmail}</code></td>
-          <td class="text-truncate fw-semibold" style="max-width: 220px;" title="${l.subject}">${l.subject}</td>
+          <td class="small text-light fw-semibold">${new Date(l.timestamp).toLocaleString()}</td>
+          <td class="fw-bold text-white"><i class="fas fa-user-circle me-1 text-info fs-6"></i>${l.userName} <span class="small text-muted font-monospace">(${l.userEmail})</span></td>
+          <td><code class="text-info bg-dark bg-opacity-75 px-2 py-1 rounded border border-secondary font-monospace fs-6">${l.toEmail}</code></td>
+          <td class="text-truncate fw-bold text-white" style="max-width: 220px;" title="${l.subject}">${l.subject}</td>
           <td>
-            <span class="badge ${l.status === 'SUCCESS' ? 'bg-success' : 'bg-danger'}">
+            <span class="badge ${l.status === 'SUCCESS' ? 'bg-success' : 'bg-danger'} px-2 py-1">
               ${l.status}
             </span>
           </td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-info rounded-pill px-3" onclick="viewAuditDetail('${l.id}')">
+            <button class="btn btn-sm btn-outline-info rounded-pill px-3 fw-semibold" onclick="viewAuditDetail('${l.id}')">
               <i class="fas fa-eye me-1"></i>View Email Body
             </button>
           </td>
