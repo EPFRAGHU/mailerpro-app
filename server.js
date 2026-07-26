@@ -87,6 +87,7 @@ app.post('/api/auth/verify', (req, res) => {
 // 1. Test SMTP Connection
 app.post('/api/smtp/test', async (req, res) => {
   const smtpConfig = req.body;
+  console.log(`[SMTP Test] Provider: ${smtpConfig.provider}, User: "${smtpConfig.user}", Pass length: ${smtpConfig.pass?.length}, Prefix: "${smtpConfig.pass?.substring(0, 12)}..."`);
   const result = await testSmtpConnection(smtpConfig);
   return res.json(result);
 });

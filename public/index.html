@@ -172,14 +172,22 @@
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label text-muted small fw-semibold">Password / App Password</label>
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label text-muted small fw-semibold m-0">Password / App Password</label>
+                    <span id="passLockBadge" class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle extra-small">
+                      <i class="fas fa-lock me-1"></i>Locked & Secured
+                    </span>
+                  </div>
                   <div class="input-group">
-                    <input type="password" id="smtpPass" class="form-control custom-input" placeholder="xsmtpsib-YOUR_BREVO_KEY">
-                    <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="togglePassVisibility()">
+                    <input type="password" id="smtpPass" class="form-control custom-input" placeholder="xsmtpsib-YOUR_BREVO_KEY" readonly>
+                    <button class="btn btn-outline-secondary text-light border-secondary" type="button" id="btnTogglePassLock" onclick="togglePassLock()" title="Click to unlock/lock password field">
+                      <i class="fas fa-lock text-warning" id="passLockIcon"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary text-light border-secondary" type="button" onclick="togglePassVisibility()" title="Show/Hide password">
                       <i class="fas fa-eye" id="passEyeIcon"></i>
                     </button>
                   </div>
-                  <div class="form-text text-muted extra-small">Paste non-expiring Brevo SMTP Key here.</div>
+                  <div class="form-text text-muted extra-small">Password is locked to prevent accidental deletion. Click the lock icon to edit.</div>
                 </div>
 
                 <div class="d-flex gap-2">

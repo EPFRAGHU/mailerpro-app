@@ -35,16 +35,18 @@ function initAppComponents() {
     onSmtpProviderChange();
   }
 
+  const defaultBrevoUser = 'b32ede001@smtp-brevo.com';
+
   const smtpUserInput = document.getElementById('smtpUser');
   if (smtpUserInput) {
-    const savedUser = localStorage.getItem('mailler_smtp_user') || 'b32ede001@smtp-brevo.com';
+    const savedUser = localStorage.getItem('mailler_smtp_user') || defaultBrevoUser;
     smtpUserInput.value = savedUser;
   }
 
   const smtpPassInput = document.getElementById('smtpPass');
   if (smtpPassInput) {
     const savedPass = localStorage.getItem('mailler_smtp_pass') || '';
-    if (savedPass) smtpPassInput.value = savedPass;
+    smtpPassInput.value = savedPass;
   }
 
   const fromEmailInput = document.getElementById('fromEmail');
@@ -85,9 +87,12 @@ function saveSmtpCredentials() {
   localStorage.setItem('mailler_smtp_user', user);
   localStorage.setItem('mailler_smtp_pass', pass);
 
+  // Automatically lock input field after saving
+  lockPassField();
+
   if (alertBox) {
     alertBox.className = 'alert alert-success mt-3';
-    alertBox.innerHTML = '<i class="fas fa-check-circle me-2"></i>SMTP Credentials & Key saved permanently to your browser!';
+    alertBox.innerHTML = '<i class="fas fa-check-circle me-2"></i>SMTP Credentials & Key saved & locked in your browser!';
     alertBox.classList.remove('d-none');
   }
 
@@ -318,6 +323,49 @@ function togglePassVisibility() {
 }
 
 /**
+ * Toggle Lock/Unlock for Password Field
+ */
+function togglePassLock() {
+  const passInput = document.getElementById('smtpPass');
+  const lockIcon = document.getElementById('passLockIcon');
+  const lockBadge = document.getElementById('passLockBadge');
+  const lockBtn = document.getElementById('btnTogglePassLock');
+
+  if (!passInput) return;
+
+  if (passInput.hasAttribute('readonly')) {
+    passInput.removeAttribute('readonly');
+    passInput.focus();
+    if (lockIcon) lockIcon.className = 'fas fa-lock-open text-info';
+    if (lockBadge) {
+      lockBadge.className = 'badge bg-info bg-opacity-10 text-info border border-info-subtle extra-small';
+      lockBadge.innerHTML = '<i class="fas fa-lock-open me-1"></i>Unlocked for Editing';
+    }
+    if (lockBtn) lockBtn.title = 'Click to Lock Key';
+  } else {
+    lockPassField();
+  }
+}
+
+/**
+ * Lock Password Field
+ */
+function lockPassField() {
+  const passInput = document.getElementById('smtpPass');
+  const lockIcon = document.getElementById('passLockIcon');
+  const lockBadge = document.getElementById('passLockBadge');
+  const lockBtn = document.getElementById('btnTogglePassLock');
+
+  if (passInput) passInput.setAttribute('readonly', 'readonly');
+  if (lockIcon) lockIcon.className = 'fas fa-lock text-warning';
+  if (lockBadge) {
+    lockBadge.className = 'badge bg-warning bg-opacity-10 text-warning border border-warning-subtle extra-small';
+    lockBadge.innerHTML = '<i class="fas fa-lock me-1"></i>Locked & Secured';
+  }
+  if (lockBtn) lockBtn.title = 'Click to Unlock & Edit';
+}
+
+/**
  * Get current SMTP Config object from form
  */
 function getSmtpConfigFromForm() {
@@ -382,8 +430,65 @@ async function testSmtp() {
       updateSmtpStatus(true, 'SMTP Ready');
     } else {
       alertBox.className = 'alert alert-danger mt-3';
-      alertBox.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message}`;
-      updateSmtpStatus(false, 'Connection Failed');
+      const isIpErr = data.ipError || (data.message && (data.message.includes('525') || data.message.includes('Unauthorized IP address')));
+      const isAuthErr = data.authError || (data.message && data.message.includes('535'));
+      
+      if (isIpErr) {
+        alertBox.innerHTML = `
+          <div class="d-flex flex-column gap-1">
+            <div><i class="fas fa-shield-alt me-2"></i><strong>IP Address Not Authorized (525)</strong></div>
+            <div class="small">${data.message}</div>
+            <div class="mt-2 pt-2 border-top border-danger-subtle small">
+              <strong><i class="fas fa-network-wired me-1"></i>How to Fix:</strong>
+              <ol class="mb-0 ps-3 mt-1 extra-small">
+                <li>Go to Brevo &rarr; <strong>SMTP & API</strong> &rarr; <strong>Authorized IP addresses</strong>.</li>
+                <li>Click <strong>Authorize IP address</strong> button.</li>
+                <li>Type your IP address: <code class="user-select-all">49.37.117.154</code> and save!</li>
+                <li>Come back here and click <strong>Test Connection</strong>.</li>
+              </ol>
+            </div>
+          </div>
+        `;
+        updateSmtpStatus(false, 'IP Blocked');
+      } else if (isAuthErr) {
+        let helpText = '';
+        if (config.provider === 'brevo') {
+          helpText = `
+            <div class="mt-2 pt-2 border-top border-danger-subtle small">
+              <strong><i class="fas fa-key me-1"></i>How to Fix Brevo SMTP Authentication:</strong>
+              <ol class="mb-0 ps-3 mt-1 extra-small">
+                <li>Log in to your <strong>Brevo Dashboard</strong>.</li>
+                <li>Go to <strong>Transactional &rarr; Settings &rarr; SMTP & API</strong>.</li>
+                <li>Copy the exact <strong>SMTP Login</strong> (e.g., <code>b32ede001@smtp-brevo.com</code> or account email).</li>
+                <li>Generate or copy a fresh <strong>SMTP Key</strong> (starts with <code>xsmtpsib-...</code>).</li>
+                <li>Paste the SMTP key in the password field, click <strong>Save Key</strong>, and re-test!</li>
+              </ol>
+            </div>`;
+        } else if (config.provider === 'gmail') {
+          helpText = `
+            <div class="mt-2 pt-2 border-top border-danger-subtle small">
+              <strong><i class="fas fa-key me-1"></i>How to Fix Gmail Authentication:</strong>
+              <ol class="mb-0 ps-3 mt-1 extra-small">
+                <li>Enable <strong>2-Step Verification</strong> in Google Account &rarr; Security.</li>
+                <li>Search for <strong>App Passwords</strong> and generate a 16-character code.</li>
+                <li>Paste the 16-char code as password (without spaces) and click <strong>Save Key</strong>.</li>
+              </ol>
+            </div>`;
+        }
+
+        alertBox.innerHTML = `
+          <div class="d-flex flex-column gap-1">
+            <div><i class="fas fa-exclamation-triangle me-2"></i><strong>Authentication Failed (535)</strong></div>
+            <div class="small">${data.message}</div>
+            ${helpText}
+          </div>
+        `;
+        updateSmtpStatus(false, 'Auth Failed');
+      } else {
+        alertBox.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message}`;
+        updateSmtpStatus(false, 'Connection Failed');
+      }
+      updateSmtpStatus(false, 'Auth Failed');
     }
   } catch (err) {
     alertBox.className = 'alert alert-danger mt-3';
