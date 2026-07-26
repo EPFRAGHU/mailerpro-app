@@ -310,6 +310,28 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
   return results;
 }
 
+async function autoAuthorizeBrevoIp(apiKey, ipAddress) {
+  if (!apiKey || !ipAddress || ipAddress === 'your server IP') return false;
+  try {
+    const res = await fetch('https://api.brevo.com/v3/authorised_ips', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({ ip: ipAddress })
+    });
+    if (res.ok) {
+      console.log(`[Brevo Auto-IP] Successfully auto-authorized server IP ${ipAddress} in Brevo account!`);
+      return true;
+    }
+  } catch (err) {
+    console.warn('[Brevo Auto-IP Warning]:', err.message);
+  }
+  return false;
+}
+
 async function sendViaBrevoApi(apiKey, mailOptions) {
   const plainTextFromHtml = mailOptions.html ? mailOptions.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
 
@@ -327,7 +349,7 @@ async function sendViaBrevoApi(apiKey, mailOptions) {
     ? mailOptions.text 
     : (plainTextFromHtml || mailOptions.subject || 'Message from MailerPro');
 
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+  let res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
       'api-key': apiKey,
@@ -337,14 +359,42 @@ async function sendViaBrevoApi(apiKey, mailOptions) {
     body: JSON.stringify(payload)
   });
 
-  const data = await res.json().catch(() => ({}));
+  let data = await res.json().catch(() => ({}));
   if (res.ok) {
     return { messageId: data.messageId || 'brevo-api-sent' };
   }
-  const msg = data.message || `Brevo API Error (${res.status})`;
+
+  let msg = data.message || `Brevo API Error (${res.status})`;
+
+  // Auto-attempt IP Whitelist self-registration if blocked
   if (msg.includes('unrecognised IP') || msg.includes('authorised_ips')) {
-    throw new Error(`${msg} -> Action Needed: Open https://app.brevo.com/security/authorised_ips and delete all listed IPs so Brevo accepts dynamic cloud server requests.`);
+    const ipMatch = msg.match(/unrecognised IP address ([\d\.]+)/) || msg.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+    const detectedIp = ipMatch ? ipMatch[1] : await getServerPublicIp();
+
+    console.log(`[Brevo Auto-IP Handler] Detected blocked IP ${detectedIp}. Attempting auto-authorization via Brevo API...`);
+    const autoApproved = await autoAuthorizeBrevoIp(apiKey, detectedIp);
+
+    if (autoApproved) {
+      // Retry dispatch immediately after auto-authorization
+      res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        return { messageId: data.messageId || 'brevo-api-sent-after-auto-ip' };
+      }
+      msg = data.message || msg;
+    }
+
+    throw new Error(`Brevo IP Security Restriction (${detectedIp}): Server IP auto-registration attempted. If error persists, please ensure Brevo API key has admin privileges or use Gmail/Resend provider.`);
   }
+
   throw new Error(msg);
 }
 
