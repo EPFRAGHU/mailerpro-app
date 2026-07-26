@@ -395,7 +395,6 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   overflow: hidden;
 }
 
-/* Glass Modal */
 /* Login Wrapper Full Screen Overlay */
 .login-wrapper {
   position: fixed;
@@ -403,10 +402,14 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 99999;
-  background: var(--bg-main);
-  display: flex;
+  z-index: 9999999 !important;
+  background: #090d16 !important;
+  display: flex !important;
   align-items: center;
   justify-content: center;
+}
+
+.login-wrapper.d-none {
+  display: none !important;
 }
 
