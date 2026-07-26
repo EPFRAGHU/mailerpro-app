@@ -1458,8 +1458,16 @@ function viewAuditDetail(logId) {
  * 1-Click Reload Past Campaign into Composer Canvas
  */
 function reloadCampaignToComposer(logId) {
-  const log = cachedAuditLogs.find(l => l.id === logId);
-  if (!log) return;
+  // Check cachedExplorerLogs first, then fallback to cachedAuditLogs
+  let log = cachedExplorerLogs.find(l => String(l.id) === String(logId));
+  if (!log) {
+    log = cachedAuditLogs.find(l => String(l.id) === String(logId));
+  }
+  if (!log) {
+    console.warn('Campaign log not found for ID:', logId);
+    alert('Unable to locate campaign details. Please refresh the page and try again.');
+    return;
+  }
 
   // 1. Fill Subject Line
   const subjectInput = document.getElementById('emailSubject');
@@ -1475,9 +1483,13 @@ function reloadCampaignToComposer(logId) {
   if (fromNameInput && log.fromName) fromNameInput.value = log.fromName;
   if (fromEmailInput && log.fromEmail) fromEmailInput.value = log.fromEmail;
 
-  // 4. Fill Recipient List
+  // 4. Fill Recipient List & Manual Textarea
   if (log.toEmail) {
     parsedRecipients = [{ email: log.toEmail, name: log.toEmail.split('@')[0] }];
+    const manualInput = document.getElementById('manualRecipientsInput');
+    if (manualInput) {
+      manualInput.value = log.toEmail;
+    }
     updateRecipientUI();
   }
 
@@ -1486,8 +1498,14 @@ function reloadCampaignToComposer(logId) {
   // 5. Switch view back to Composer Tab
   const composerTabBtn = document.getElementById('composer-tab');
   if (composerTabBtn) {
-    const tab = new bootstrap.Tab(composerTabBtn);
+    const tab = bootstrap.Tab.getInstance(composerTabBtn) || new bootstrap.Tab(composerTabBtn);
     tab.show();
+  }
+
+  // 6. Scroll smoothly to composer form header
+  const composerHeader = document.querySelector('.card-header-custom');
+  if (composerHeader) {
+    composerHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
