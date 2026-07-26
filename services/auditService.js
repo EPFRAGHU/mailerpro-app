@@ -237,7 +237,7 @@ function getAuditLogs(options = {}) {
   let filtered = store.auditLogs;
 
   // Role check: Standard users only see their own logs
-  if (role !== 'superadmin' && userId) {
+  if (role && role !== 'superadmin' && userId) {
     filtered = filtered.filter(l => l.userId === userId);
   } else if (options.filterUserId) {
     filtered = filtered.filter(l => l.userId === options.filterUserId);

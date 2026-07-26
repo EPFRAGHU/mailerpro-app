@@ -1156,6 +1156,9 @@ function showMainApp() {
       usersTabLi.classList.add('d-none');
     }
   }
+
+  // Load Past Campaigns Explorer for authenticated session
+  loadCampaignExplorer();
 }
 
 async function handleLogin(event) {
