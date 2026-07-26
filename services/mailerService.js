@@ -123,7 +123,7 @@ async function testSmtpConnection(config) {
   // 3. Nodemailer SMTP Fallback
   let portsToTry = [parseInt(config.port, 10) || 587];
   if (config.provider === 'brevo') {
-    portsToTry = [465, 587, 2525]; // Lead with Port 465 SSL for cloud platform compatibility
+    portsToTry = [587, 2525, 465]; // Lead with Port 587 STARTTLS as specified in Brevo settings
   } else if (config.provider === 'resend' || config.provider === 'gmail') {
     portsToTry = [465]; // Resend and Gmail use Port 465 SSL
   }
