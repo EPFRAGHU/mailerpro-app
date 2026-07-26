@@ -79,8 +79,8 @@ npm install
 Create a `.env` file in the root directory:
 ```env
 PORT=3000
-ADMIN_USER=raghunatha.maharana@gmail.com
-ADMIN_PASS=Raghu@789123*
+ADMIN_USER=admin@yourdomain.com
+ADMIN_PASS=YourSecureAdminPassword123*
 ```
 
 ### 5. Start Application
