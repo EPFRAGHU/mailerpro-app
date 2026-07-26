@@ -298,13 +298,21 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
 }
 
 async function sendViaBrevoApi(apiKey, mailOptions) {
+  const plainTextFromHtml = mailOptions.html ? mailOptions.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+
   const payload = {
     sender: { name: mailOptions.fromName || 'MailerPro', email: mailOptions.fromEmail },
     to: [{ email: mailOptions.to }],
-    subject: mailOptions.subject,
-    htmlContent: mailOptions.html,
-    textContent: mailOptions.text
+    subject: mailOptions.subject || 'Notification'
   };
+
+  if (mailOptions.html && mailOptions.html.trim() !== '') {
+    payload.htmlContent = mailOptions.html;
+  }
+
+  payload.textContent = (mailOptions.text && mailOptions.text.trim() !== '') 
+    ? mailOptions.text 
+    : (plainTextFromHtml || mailOptions.subject || 'Message from MailerPro');
 
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -324,13 +332,18 @@ async function sendViaBrevoApi(apiKey, mailOptions) {
 }
 
 async function sendViaResendApi(apiKey, mailOptions) {
+  const plainTextFromHtml = mailOptions.html ? mailOptions.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+
   const payload = {
     from: mailOptions.fromName ? `${mailOptions.fromName} <${mailOptions.fromEmail}>` : mailOptions.fromEmail,
     to: [mailOptions.to],
-    subject: mailOptions.subject,
-    html: mailOptions.html,
-    text: mailOptions.text
+    subject: mailOptions.subject || 'Notification'
   };
+
+  if (mailOptions.html && mailOptions.html.trim() !== '') {
+    payload.html = mailOptions.html;
+  }
+  payload.text = (mailOptions.text && mailOptions.text.trim() !== '') ? mailOptions.text : (plainTextFromHtml || mailOptions.subject || 'Notification');
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
