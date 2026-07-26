@@ -65,6 +65,21 @@ function replacePlaceholders(templateStr, data = {}) {
   });
 }
 
+let cachedServerIp = null;
+async function getServerPublicIp() {
+  if (cachedServerIp) return cachedServerIp;
+  return new Promise((resolve) => {
+    require('https').get('https://api.ipify.org', (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        cachedServerIp = data.trim();
+        resolve(cachedServerIp);
+      });
+    }).on('error', () => resolve('your server IP'));
+  });
+}
+
 /**
  * Verifies SMTP credentials with multi-port auto-failover (587, 2525, 465).
  */
@@ -90,10 +105,12 @@ async function testSmtpConnection(config) {
       const isAuthError = err.code === 'EAUTH' || err.responseCode === 535 || errMsg.includes('535') || errMsg.includes('Authentication failed') || (errMsg.includes('Invalid login') && !isIpError);
       
       if (isIpError) {
+        const serverIp = await getServerPublicIp();
         return {
           success: false,
           ipError: true,
-          message: `Unauthorized IP Address (525 5.7.1): Brevo requires authorizing your public IP address (49.37.117.154). Please go to Brevo -> SMTP & API -> Authorized IP addresses and click "Authorize IP address" to add 49.37.117.154.`
+          serverIp,
+          message: `Unauthorized IP Address (525 5.7.1): Brevo requires authorizing your application server IP (${serverIp}). Please go to Brevo -> SMTP & API -> Authorized IP addresses and click "Authorize IP address" to add ${serverIp}.`
         };
       }
 

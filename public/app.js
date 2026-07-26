@@ -434,6 +434,7 @@ async function testSmtp() {
       const isAuthErr = data.authError || (data.message && data.message.includes('535'));
       
       if (isIpErr) {
+        const ipToAuthorize = data.serverIp || 'your server IP';
         alertBox.innerHTML = `
           <div class="d-flex flex-column gap-1">
             <div><i class="fas fa-shield-alt me-2"></i><strong>IP Address Not Authorized (525)</strong></div>
@@ -443,7 +444,7 @@ async function testSmtp() {
               <ol class="mb-0 ps-3 mt-1 extra-small">
                 <li>Go to Brevo &rarr; <strong>SMTP & API</strong> &rarr; <strong>Authorized IP addresses</strong>.</li>
                 <li>Click <strong>Authorize IP address</strong> button.</li>
-                <li>Type your IP address: <code class="user-select-all">49.37.117.154</code> and save!</li>
+                <li>Type your server IP address: <code class="user-select-all">${ipToAuthorize}</code> and save!</li>
                 <li>Come back here and click <strong>Test Connection</strong>.</li>
               </ol>
             </div>
