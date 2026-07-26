@@ -537,3 +537,55 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   display: none !important;
 }
 
+/* Responsive Mobile & Tablet Adjustments */
+@media (max-width: 991.98px) {
+  .custom-navbar .container-fluid {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .custom-nav-pills {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 6px;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .custom-nav-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass-card {
+    margin-bottom: 20px;
+  }
+
+  .table-responsive {
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+
+  .login-card {
+    padding: 1.5rem !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  body {
+    font-size: 0.9rem;
+  }
+
+  .custom-nav-pills .nav-link {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .card-header-custom {
+    padding: 14px 16px;
+  }
+
+  .card-body-custom {
+    padding: 16px;
+  }
+}
+
