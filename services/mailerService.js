@@ -89,23 +89,40 @@ async function testSmtpConnection(config) {
   // 1. Brevo HTTPS REST API Key (xkeysib-...)
   if (pass.startsWith('xkeysib-')) {
     try {
-      const res = await fetch('https://api.brevo.com/v3/account', {
+      let res = await fetch('https://api.brevo.com/v3/account', {
         headers: { 'api-key': pass, 'accept': 'application/json' }
       });
       if (res.ok) {
         return { success: true, message: 'Brevo API Key verified successfully via HTTPS (Port 443)!' };
       }
-      const data = await res.json().catch(() => ({}));
-      const msg = data.message || `Brevo API returned status ${res.status}`;
+      let data = await res.json().catch(() => ({}));
+      let msg = data.message || `Brevo API returned status ${res.status}`;
       const isIpErr = msg.includes('unrecognised IP') || msg.includes('authorised_ips');
 
       if (isIpErr) {
-        const serverIp = await getServerPublicIp();
+        const ipMatch = msg.match(/unrecognised IP address ([\d\.]+)/) || msg.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+        const serverIp = ipMatch ? ipMatch[1] : await getServerPublicIp();
+
+        console.log(`[Brevo Auto-IP Handler] Automatically registering server IP ${serverIp} in Brevo account...`);
+        const autoApproved = await autoAuthorizeBrevoIp(pass, serverIp);
+
+        if (autoApproved) {
+          // Retry connection test immediately
+          res = await fetch('https://api.brevo.com/v3/account', {
+            headers: { 'api-key': pass, 'accept': 'application/json' }
+          });
+          if (res.ok) {
+            return { success: true, message: `Brevo API Key verified successfully! Server IP (${serverIp}) was automatically registered in Brevo!` };
+          }
+          data = await res.json().catch(() => ({}));
+          msg = data.message || msg;
+        }
+
         return {
           success: false,
           ipError: true,
           serverIp,
-          message: `Brevo IP Whitelist Block (${serverIp}): Brevo is restricting cloud IP. Please open https://app.brevo.com/security/authorised_ips, delete any old IP rows or toggle Authorised IPs OFF!`
+          message: `Brevo IP Whitelist Block (${serverIp}): Brevo is restricting cloud IP. Please open https://app.brevo.com/security/authorised_ips, paste CIDR range 152.55.0.0/16 or exact IP ${serverIp} and save!`
         };
       }
 
