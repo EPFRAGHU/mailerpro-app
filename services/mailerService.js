@@ -101,31 +101,37 @@ async function testSmtpConnection(config) {
     } catch (err) {
       lastError = err;
       const errMsg = err.message || '';
-      const isIpError = err.responseCode === 525 || errMsg.includes('525') || errMsg.includes('Unauthorized IP address');
-      const isAuthError = err.code === 'EAUTH' || err.responseCode === 535 || errMsg.includes('535') || errMsg.includes('Authentication failed') || (errMsg.includes('Invalid login') && !isIpError);
-      
-      if (isIpError) {
-        const serverIp = await getServerPublicIp();
-        return {
-          success: false,
-          ipError: true,
-          serverIp,
-          message: `Unauthorized IP Address (525 5.7.1): Brevo requires authorizing your application server IP (${serverIp}). Please go to Brevo -> SMTP & API -> Authorized IP addresses and click "Authorize IP address" to add ${serverIp}.`
-        };
-      }
-
+      const isAuthError = err.code === 'EAUTH' || err.responseCode === 535 || (errMsg.includes('535') && !errMsg.includes('525'));
       if (isAuthError) {
-        let hintMessage = `Invalid Login (535 Authentication Failed): The SMTP server rejected your credentials.`;
-        if (config.provider === 'brevo') {
-          hintMessage += ` Please check your Brevo SMTP Login email and paste a valid non-revoked Brevo SMTP Key (starts with xsmtpsib-...).`;
-        } else if (config.provider === 'gmail') {
-          hintMessage += ` For Gmail, you must use a 16-character App Password (not your regular account password).`;
-        } else if (config.provider === 'resend') {
-          hintMessage += ` For Resend, set username to "resend" and use your API key (re_...) as the password.`;
-        }
-        return { success: false, message: hintMessage, authError: true };
+        break;
       }
     }
+  }
+
+  const errMsg = lastError?.message || '';
+  const isIpError = lastError?.responseCode === 525 || errMsg.includes('525') || errMsg.includes('Unauthorized IP address');
+  const isAuthError = lastError?.code === 'EAUTH' || lastError?.responseCode === 535 || errMsg.includes('535') || errMsg.includes('Authentication failed');
+
+  if (isIpError) {
+    const serverIp = await getServerPublicIp();
+    return {
+      success: false,
+      ipError: true,
+      serverIp,
+      message: `Unauthorized IP Address (525 5.7.1): Brevo is restricting connections from your application server IP (${serverIp}).`
+    };
+  }
+
+  if (isAuthError) {
+    let hintMessage = `Invalid Login (535 Authentication Failed): The SMTP server rejected your credentials.`;
+    if (config.provider === 'brevo') {
+      hintMessage += ` Please check your Brevo SMTP Login email and paste a valid non-revoked Brevo SMTP Key (starts with xsmtpsib-...).`;
+    } else if (config.provider === 'gmail') {
+      hintMessage += ` For Gmail, you must use a 16-character App Password (not your regular account password).`;
+    } else if (config.provider === 'resend') {
+      hintMessage += ` For Resend, set username to "resend" and use your API key (re_...) as the password.`;
+    }
+    return { success: false, message: hintMessage, authError: true };
   }
 
   return { success: false, message: lastError?.message || 'Failed to connect to SMTP server.' };
