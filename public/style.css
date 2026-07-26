@@ -191,25 +191,110 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   box-shadow: 0 0 8px #22c55e;
 }
 
-/* Custom Nav Pills */
+/* Custom Nav Pills - Vibrant Color-Themed Oval Badges */
+.custom-nav-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .custom-nav-pills .nav-link {
-  color: var(--text-subtle);
-  border-radius: 50px;
-  padding: 8px 18px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 50px !important;
+  padding: 6px 16px !important;
+  font-size: 0.83rem !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  color: var(--text-label) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.custom-nav-pills .nav-link:hover {
-  color: var(--text-heading);
-  background: rgba(255, 255, 255, 0.08);
+/* 1. Composer Tab (Cyber Blue / Indigo Pill) */
+.custom-nav-pills .nav-link.nav-composer {
+  border-color: rgba(99, 102, 241, 0.35) !important;
+  color: #a5b4fc !important;
 }
-
-.custom-nav-pills .nav-link.active {
-  background: var(--accent-gradient);
+.custom-nav-pills .nav-link.nav-composer:hover {
+  background: rgba(99, 102, 241, 0.2) !important;
+  border-color: #6366f1 !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+.custom-nav-pills .nav-link.nav-composer.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.5) !important;
+}
+
+/* 2. Schedules Tab (Amber Gold Pill) */
+.custom-nav-pills .nav-link.nav-schedules {
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: #fcd34d !important;
+}
+.custom-nav-pills .nav-link.nav-schedules:hover {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: #f59e0b !important;
+  color: #ffffff !important;
+}
+.custom-nav-pills .nav-link.nav-schedules.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5) !important;
+}
+
+/* 3. Audit Logs Tab (Electric Cyan Pill) */
+.custom-nav-pills .nav-link.nav-audit {
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  color: #67e8f9 !important;
+}
+.custom-nav-pills .nav-link.nav-audit:hover {
+  background: rgba(6, 182, 212, 0.2) !important;
+  border-color: #06b6d4 !important;
+  color: #ffffff !important;
+}
+.custom-nav-pills .nav-link.nav-audit.active {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  color: #ffffff !important;
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.5) !important;
+}
+
+/* 4. Colleagues & Roles Tab (Vibrant Purple Pill) */
+.custom-nav-pills .nav-link.nav-users {
+  border-color: rgba(168, 85, 247, 0.35) !important;
+  color: #d8b4fe !important;
+}
+.custom-nav-pills .nav-link.nav-users:hover {
+  background: rgba(168, 85, 247, 0.2) !important;
+  border-color: #a855f7 !important;
+  color: #ffffff !important;
+}
+.custom-nav-pills .nav-link.nav-users.active {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%) !important;
+  color: #ffffff !important;
+  border-color: #c084fc !important;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.5) !important;
+}
+
+/* 5. Live Feeds Tab (Emerald Mint Pill) */
+.custom-nav-pills .nav-link.nav-logs {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #6ee7b7 !important;
+}
+.custom-nav-pills .nav-link.nav-logs:hover {
+  background: rgba(16, 185, 129, 0.2) !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+.custom-nav-pills .nav-link.nav-logs.active {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+  color: #ffffff !important;
+  border-color: #34d399 !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.5) !important;
 }
 
 /* Glassmorphism Cards */

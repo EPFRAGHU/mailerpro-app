@@ -100,19 +100,19 @@
 
         <ul class="nav nav-pills custom-nav-pills" id="mainTab" role="tablist">
           <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="composer-tab" data-bs-toggle="tab" data-bs-target="#composer-pane" type="button"><i class="fas fa-edit me-2"></i>Composer</button>
+            <button class="nav-link nav-composer active" id="composer-tab" data-bs-toggle="tab" data-bs-target="#composer-pane" type="button"><i class="fas fa-edit me-1"></i>Composer</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules-pane" type="button" onclick="loadSchedules()"><i class="fas fa-clock me-2"></i>Schedules <span id="scheduleBadge" class="badge bg-primary rounded-pill ms-1">0</span></button>
+            <button class="nav-link nav-schedules" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules-pane" type="button" onclick="loadSchedules()"><i class="fas fa-clock me-1"></i>Schedules <span id="scheduleBadge" class="badge bg-dark border border-warning text-warning rounded-pill ms-1">0</span></button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-pane" type="button" onclick="loadAuditLogs()"><i class="fas fa-history me-2"></i>Audit Logs</button>
+            <button class="nav-link nav-audit" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-pane" type="button" onclick="loadAuditLogs()"><i class="fas fa-history me-1"></i>Audit Logs</button>
           </li>
           <li class="nav-item" id="usersTabLi" role="presentation">
-            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" onclick="loadUsers()"><i class="fas fa-users me-2"></i>Colleagues & Roles</button>
+            <button class="nav-link nav-users" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" onclick="loadUsers()"><i class="fas fa-users me-1"></i>Colleagues & Roles</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" onclick="loadLogs()"><i class="fas fa-terminal me-2"></i>Live Feeds</button>
+            <button class="nav-link nav-logs" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" onclick="loadLogs()"><i class="fas fa-terminal me-1"></i>Live Feeds</button>
           </li>
         </ul>
       </div>
