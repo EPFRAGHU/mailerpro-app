@@ -6,6 +6,17 @@ const fs = require('fs');
 
 const { testSmtpConnection, sendBulkEmails } = require('./services/mailerService');
 const { initScheduler, addSchedule, getSchedules, deleteSchedule, toggleSchedule, timeToCron } = require('./services/schedulerService');
+const { 
+  authenticateUser, 
+  getUsers, 
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  getSystemConfig, 
+  updateSystemConfig, 
+  addAuditLog, 
+  getAuditLogs 
+} = require('./services/auditService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,33 +55,29 @@ initScheduler((event) => {
   addLog(event);
 });
 
-// --- AUTH API ROUTES ---
-const ADMIN_USER = process.env.ADMIN_USER || 'raghunatha.maharana@gmail.com';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'Raghu@789123*';
-
+// --- AUTH & RBAC API ROUTES ---
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
-  
-  if ((username === ADMIN_USER || username === 'admin') && (password === ADMIN_PASS || password === 'Raghu@789123*')) {
-    const token = 'session-' + Date.now() + '-' + Math.random().toString(36).substring(2);
+  const user = authenticateUser(username, password);
+
+  if (user) {
+    const token = 'session-' + user.id + '-' + Date.now();
     addLog({
       type: 'AUTH_LOGIN',
-      user: username,
+      user: user.email,
+      role: user.role,
       timestamp: new Date().toISOString()
     });
     return res.json({
       success: true,
       token,
-      user: {
-        email: username,
-        name: username.includes('@') ? username.split('@')[0] : 'Administrator'
-      }
+      user
     });
   }
 
   return res.status(401).json({
     success: false,
-    message: 'Invalid Username or Password. Please try again.'
+    message: 'Invalid Email/Username or Password. Please try again.'
   });
 });
 
@@ -80,6 +87,60 @@ app.post('/api/auth/verify', (req, res) => {
     return res.json({ success: true, valid: true });
   }
   return res.json({ success: false, valid: false });
+});
+
+// --- USER MANAGEMENT API ROUTES (SUPERADMIN) ---
+app.get('/api/users', (req, res) => {
+  try {
+    const users = getUsers();
+    return res.json({ success: true, users });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/users', (req, res) => {
+  try {
+    const { email, name, password, role } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+    const newUser = createUser({ email, name, password, role });
+    return res.json({ success: true, user: newUser, message: 'Colleague user account created successfully.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.put('/api/users/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = updateUser(id, req.body);
+    return res.json({ success: true, user: updated, message: 'User updated successfully.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.delete('/api/users/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    deleteUser(id);
+    return res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// --- AUDIT LOG EXPLORER API ROUTES ---
+app.get('/api/audit/logs', (req, res) => {
+  try {
+    const { role, userId, date, dateFrom, dateTo, search, filterUserId } = req.query;
+    const logs = getAuditLogs({ role, userId, date, dateFrom, dateTo, search, filterUserId });
+    return res.json({ success: true, logs });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // --- API ROUTES ---
@@ -109,8 +170,11 @@ app.post('/api/mail/send', upload.array('attachments'), async (req, res) => {
 
     emailPayload.attachments = attachments;
 
+    const senderUser = req.body.senderUser ? JSON.parse(req.body.senderUser) : null;
+
     addLog({
       type: 'CAMPAIGN_START',
+      user: senderUser?.email || 'System',
       total: emailPayload.recipients?.length || 0,
       timestamp: new Date().toISOString()
     });
@@ -122,6 +186,24 @@ app.post('/api/mail/send', upload.array('attachments'), async (req, res) => {
         sent: currentResults.sent,
         failed: currentResults.failed,
         total: currentResults.total
+      });
+
+      // Record in persistent Audit Store
+      addAuditLog({
+        userId: senderUser?.id || 'usr-admin-1',
+        userEmail: senderUser?.email || 'raghunatha.maharana@gmail.com',
+        userName: senderUser?.name || 'Superadmin',
+        fromEmail: emailPayload.fromEmail || smtpConfig.user,
+        fromName: emailPayload.fromName || '',
+        toEmail: logEntry.email,
+        subject: emailPayload.subject,
+        bodyHtml: emailPayload.bodyHtml,
+        bodyText: emailPayload.bodyText,
+        provider: smtpConfig.provider,
+        status: logEntry.status,
+        messageId: logEntry.messageId || '',
+        errorDetails: logEntry.error || '',
+        timestamp: logEntry.timestamp || new Date().toISOString()
       });
     });
 

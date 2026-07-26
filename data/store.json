@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "id": "usr-admin-1",
+      "email": "raghunatha.maharana@gmail.com",
+      "name": "Superadmin (Owner)",
+      "passwordHash": "3cb3901358ccb3e31b1184d124b6579b3b29975a5b73e05d41dac474df8d8869",
+      "role": "superadmin",
+      "active": true,
+      "createdAt": "2026-07-26T05:43:23.238Z"
+    }
+  ],
+  "auditLogs": [],
+  "systemConfig": {
+    "masterProvider": "brevo",
+    "masterUser": "b32ede001@smtp-brevo.com",
+    "masterPass": ""
+  }
+}

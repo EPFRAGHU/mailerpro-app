@@ -103,10 +103,16 @@
             <button class="nav-link active" id="composer-tab" data-bs-toggle="tab" data-bs-target="#composer-pane" type="button"><i class="fas fa-edit me-2"></i>Composer</button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules-pane" type="button" onclick="loadSchedules()"><i class="fas fa-clock me-2"></i>Daily Schedules <span id="scheduleBadge" class="badge bg-primary rounded-pill ms-1">0</span></button>
+            <button class="nav-link" id="schedules-tab" data-bs-toggle="tab" data-bs-target="#schedules-pane" type="button" onclick="loadSchedules()"><i class="fas fa-clock me-2"></i>Schedules <span id="scheduleBadge" class="badge bg-primary rounded-pill ms-1">0</span></button>
           </li>
           <li class="nav-item" role="presentation">
-            <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" onclick="loadLogs()"><i class="fas fa-terminal me-2"></i>Live Logs</button>
+            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit-pane" type="button" onclick="loadAuditLogs()"><i class="fas fa-history me-2"></i>Audit Logs</button>
+          </li>
+          <li class="nav-item" id="usersTabLi" role="presentation">
+            <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-pane" type="button" onclick="loadUsers()"><i class="fas fa-users me-2"></i>Colleagues & Roles</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button" onclick="loadLogs()"><i class="fas fa-terminal me-2"></i>Live Feeds</button>
           </li>
         </ul>
       </div>
@@ -411,8 +417,142 @@
         </div>
       </div>
 
+      <!-- AUDIT LOGS PANE -->
+      <div class="tab-pane fade" id="audit-pane" role="tabpanel">
+        <div class="glass-card mb-4">
+          <div class="card-header-custom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <h5 class="m-0 fw-bold"><i class="fas fa-history theme-icon-glow me-2"></i>Enterprise Audit Log & Content Inspector</h5>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <input type="date" id="auditFilterDate" class="form-control form-control-sm custom-input w-auto" onchange="loadAuditLogs()">
+              <select id="auditFilterUser" class="form-select form-select-sm custom-input w-auto" onchange="loadAuditLogs()">
+                <option value="">All Colleagues</option>
+              </select>
+              <input type="text" id="auditSearchQuery" class="form-control form-control-sm custom-input w-auto" placeholder="Search recipient, subject..." onkeyup="loadAuditLogs()">
+              <button class="btn btn-sm btn-outline-info rounded-pill px-3" onclick="loadAuditLogs()"><i class="fas fa-sync-alt me-1"></i>Filter</button>
+            </div>
+          </div>
+          <div class="card-body-custom">
+            <div class="table-responsive">
+              <table class="table custom-table align-middle">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Sent By (Colleague)</th>
+                    <th>Recipient</th>
+                    <th>Subject Line</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Loading audit log records...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLLEAGUES & ROLES PANE (SUPERADMIN) -->
+      <div class="tab-pane fade" id="users-pane" role="tabpanel">
+        <div class="glass-card mb-4">
+          <div class="card-header-custom d-flex align-items-center justify-content-between">
+            <h5 class="m-0 fw-bold"><i class="fas fa-users theme-icon-glow me-2"></i>Office Colleagues & Access Roles</h5>
+            <button class="btn btn-sm btn-primary btn-gradient rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#addUserModal">
+              <i class="fas fa-user-plus me-1"></i>Add Colleague Account
+            </button>
+          </div>
+          <div class="card-body-custom">
+            <div class="table-responsive">
+              <table class="table custom-table align-middle">
+                <thead>
+                  <tr>
+                    <th>Colleague Name</th>
+                    <th>Office Email ID</th>
+                    <th>Role</th>
+                    <th>Account Status</th>
+                    <th>Created Date</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Loading colleague user accounts...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
+
+  <!-- MODAL: ADD COLLEAGUE USER -->
+  <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-modal text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fas fa-user-plus text-primary me-2"></i>Create Colleague User Account</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Colleague Full Name</label>
+            <input type="text" id="newUserName" class="form-control custom-input" placeholder="e.g. Sarah Smith">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Office Email Address (Login Username)</label>
+            <input type="email" id="newUserEmail" class="form-control custom-input" placeholder="e.g. sarah@company.com" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Initial Login Password</label>
+            <input type="password" id="newUserPassword" class="form-control custom-input" placeholder="Set password for colleague" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-semibold">Role Access Level</label>
+            <select id="newUserRole" class="form-select custom-input">
+              <option value="user">Colleague (Standard Mailer Access)</option>
+              <option value="superadmin">Superadmin (Full Control & Audit Inspector)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary rounded-pill btn-gradient px-4" onclick="confirmAddUser()">Create Colleague</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUDIT EMAIL CONTENT INSPECTOR -->
+  <div class="modal fade" id="auditDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content glass-modal text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title fw-bold"><i class="fas fa-envelope-open-text text-info me-2"></i>Audit Email Details & Message Body</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-2 mb-3 bg-dark bg-opacity-40 p-3 rounded border border-secondary">
+            <div class="col-md-6"><span class="text-muted small">Sent By:</span> <strong id="audModalSender" class="text-info"></strong></div>
+            <div class="col-md-6"><span class="text-muted small">Recipient:</span> <strong id="audModalRecipient" class="text-light"></strong></div>
+            <div class="col-md-6"><span class="text-muted small">Timestamp:</span> <span id="audModalTime" class="text-muted"></span></div>
+            <div class="col-md-6"><span class="text-muted small">Status:</span> <span id="audModalStatus"></span></div>
+            <div class="col-12 mt-2"><span class="text-muted small">Subject:</span> <strong id="audModalSubject" class="text-warning"></strong></div>
+          </div>
+          <label class="form-label text-muted small fw-semibold">Dispatched Email Content (HTML / Text Preview):</label>
+          <div id="audModalBody" class="p-3 bg-white text-dark rounded font-monospace" style="max-height: 350px; overflow-y: auto; white-space: pre-wrap;"></div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: GMAIL APP PASSWORD GUIDE -->
   <div class="modal fade" id="gmailGuideModal" tabindex="-1" aria-hidden="true">

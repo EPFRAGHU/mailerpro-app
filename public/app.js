@@ -865,6 +865,9 @@ async function sendNow() {
 
   const formData = new FormData();
   formData.append('smtpConfig', JSON.stringify(smtpConfig));
+  if (currentUser) {
+    formData.append('senderUser', JSON.stringify(currentUser));
+  }
   formData.append('emailPayload', JSON.stringify({
     fromName,
     fromEmail,
@@ -1085,4 +1088,325 @@ async function loadLogs() {
   } catch (err) {
     consoleEl.innerHTML = `<div class="text-danger">[Error] Could not load logs: ${err.message}</div>`;
   }
+}
+
+// --- MULTI-USER AUTH & RBAC SESSION CONTROLLER ---
+let currentUser = null;
+
+async function checkAuthSession() {
+  const token = localStorage.getItem('mailler_auth_token');
+  const userJson = localStorage.getItem('mailler_auth_user');
+
+  if (token && userJson) {
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+
+      if (data.valid) {
+        currentUser = JSON.parse(userJson);
+        showMainApp();
+        return true;
+      }
+    } catch (e) {
+      console.error('Session check failed:', e);
+    }
+  }
+
+  showLoginScreen();
+  return false;
+}
+
+function showLoginScreen() {
+  const screen = document.getElementById('loginScreen');
+  const mainApp = document.getElementById('mainAppWrapper');
+  if (screen) screen.classList.remove('d-none');
+  if (mainApp) mainApp.classList.add('d-none');
+}
+
+function showMainApp() {
+  const screen = document.getElementById('loginScreen');
+  const mainApp = document.getElementById('mainAppWrapper');
+  if (screen) screen.classList.add('d-none');
+  if (mainApp) mainApp.classList.remove('d-none');
+
+  // Handle RBAC visibility for Superadmin vs Colleague
+  const usersTabLi = document.getElementById('usersTabLi');
+  if (usersTabLi) {
+    if (currentUser && currentUser.role === 'superadmin') {
+      usersTabLi.classList.remove('d-none');
+    } else {
+      usersTabLi.classList.add('d-none');
+    }
+  }
+}
+
+async function handleLogin(event) {
+  if (event) event.preventDefault();
+  const usernameInput = document.getElementById('loginUsername');
+  const passwordInput = document.getElementById('loginPassword');
+  const alertBox = document.getElementById('loginAlert');
+  const btn = document.getElementById('btnLogin');
+
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!username || !password) {
+    if (alertBox) {
+      alertBox.textContent = 'Please enter both login email and password.';
+      alertBox.classList.remove('d-none');
+    }
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Authenticating...';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      currentUser = data.user;
+      localStorage.setItem('mailler_auth_token', data.token);
+      localStorage.setItem('mailler_auth_user', JSON.stringify(data.user));
+
+      showMainApp();
+      initAppComponents();
+    } else {
+      if (alertBox) {
+        alertBox.textContent = data.message || 'Invalid Username or Password.';
+        alertBox.classList.remove('d-none');
+      }
+    }
+  } catch (err) {
+    if (alertBox) {
+      alertBox.textContent = 'Backend Error: ' + err.message;
+      alertBox.classList.remove('d-none');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-shield-alt me-2"></i>Sign In to MaillerPRO';
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('mailler_auth_token');
+  localStorage.removeItem('mailler_auth_user');
+  currentUser = null;
+  showLoginScreen();
+}
+
+function toggleLoginPass() {
+  const input = document.getElementById('loginPassword');
+  const icon = document.getElementById('loginPassEye');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fas fa-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'fas fa-eye';
+  }
+}
+
+/**
+ * Load Colleague Users (Superadmin Only)
+ */
+async function loadUsers() {
+  const tbody = document.getElementById('usersTableBody');
+  const userSelect = document.getElementById('auditFilterUser');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/api/users');
+    const data = await res.json();
+
+    if (data.success && data.users) {
+      if (userSelect) {
+        userSelect.innerHTML = '<option value="">All Colleagues</option>' + 
+          data.users.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
+      }
+
+      if (data.users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No colleague accounts created yet. Click "Add Colleague Account" to create one.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.users.map(u => `
+        <tr>
+          <td class="fw-semibold text-light"><i class="fas fa-user-circle me-2 text-info"></i>${u.name}</td>
+          <td><code class="text-light">${u.email}</code></td>
+          <td>
+            <span class="badge ${u.role === 'superadmin' ? 'bg-warning text-dark' : 'bg-primary'} fw-bold">
+              ${u.role === 'superadmin' ? 'Superadmin Owner' : 'Colleague'}
+            </span>
+          </td>
+          <td>
+            <span class="badge ${u.active ? 'bg-success' : 'bg-danger'}">
+              ${u.active ? 'Active' : 'Disabled'}
+            </span>
+          </td>
+          <td class="small text-muted">${new Date(u.createdAt).toLocaleDateString()}</td>
+          <td class="text-end">
+            ${u.role !== 'superadmin' ? `
+              <button class="btn btn-sm btn-outline-warning me-1" onclick="toggleUserActive('${u.id}', ${!u.active})" title="Toggle Active/Disable">
+                <i class="fas ${u.active ? 'fa-user-slash' : 'fa-user-check'}"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount('${u.id}')" title="Delete Colleague Account">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            ` : '<span class="small text-muted">Primary Superadmin</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error loading users: ${err.message}</td></tr>`;
+  }
+}
+
+async function confirmAddUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  const email = document.getElementById('newUserEmail').value.trim();
+  const password = document.getElementById('newUserPassword').value.trim();
+  const role = document.getElementById('newUserRole').value;
+
+  if (!email || !password) {
+    alert('Please enter both Office Email Address and Password for the colleague.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alert(data.message);
+      const modalEl = document.getElementById('addUserModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+
+      document.getElementById('newUserName').value = '';
+      document.getElementById('newUserEmail').value = '';
+      document.getElementById('newUserPassword').value = '';
+
+      loadUsers();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (err) {
+    alert('Failed to create user: ' + err.message);
+  }
+}
+
+async function toggleUserActive(id, active) {
+  try {
+    await fetch(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active })
+    });
+    loadUsers();
+  } catch (err) {
+    alert('Failed to update user state.');
+  }
+}
+
+async function deleteUserAccount(id) {
+  if (!confirm('Are you sure you want to delete this colleague user account?')) return;
+  try {
+    await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    loadUsers();
+  } catch (err) {
+    alert('Failed to delete user.');
+  }
+}
+
+let cachedAuditLogs = [];
+async function loadAuditLogs() {
+  const tbody = document.getElementById('auditTableBody');
+  const dateVal = document.getElementById('auditFilterDate')?.value || '';
+  const userVal = document.getElementById('auditFilterUser')?.value || '';
+  const searchVal = document.getElementById('auditSearchQuery')?.value || '';
+
+  if (!tbody) return;
+
+  try {
+    const role = currentUser?.role || 'user';
+    const userId = currentUser?.id || '';
+
+    const query = new URLSearchParams({
+      role,
+      userId,
+      date: dateVal,
+      filterUserId: userVal,
+      search: searchVal
+    });
+
+    const res = await fetch(`/api/audit/logs?${query.toString()}`);
+    const data = await res.json();
+
+    if (data.success && data.logs) {
+      cachedAuditLogs = data.logs;
+      if (data.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No audit log records found for the selected date/filter criteria.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.logs.map(l => `
+        <tr>
+          <td class="small text-muted">${new Date(l.timestamp).toLocaleString()}</td>
+          <td class="fw-semibold text-info"><i class="fas fa-user-circle me-1"></i>${l.userName} (${l.userEmail})</td>
+          <td><code class="text-light">${l.toEmail}</code></td>
+          <td class="text-truncate fw-semibold" style="max-width: 220px;" title="${l.subject}">${l.subject}</td>
+          <td>
+            <span class="badge ${l.status === 'SUCCESS' ? 'bg-success' : 'bg-danger'}">
+              ${l.status}
+            </span>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-info rounded-pill px-3" onclick="viewAuditDetail('${l.id}')">
+              <i class="fas fa-eye me-1"></i>View Email Body
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error loading audit logs: ${err.message}</td></tr>`;
+  }
+}
+
+function viewAuditDetail(logId) {
+  const log = cachedAuditLogs.find(l => l.id === logId);
+  if (!log) return;
+
+  document.getElementById('audModalSender').textContent = `${log.userName} <${log.userEmail}>`;
+  document.getElementById('audModalRecipient').textContent = log.toEmail;
+  document.getElementById('audModalTime').textContent = new Date(log.timestamp).toLocaleString();
+  document.getElementById('audModalStatus').className = `badge ${log.status === 'SUCCESS' ? 'bg-success' : 'bg-danger'}`;
+  document.getElementById('audModalStatus').textContent = log.status;
+  document.getElementById('audModalSubject').textContent = log.subject;
+
+  const bodyEl = document.getElementById('audModalBody');
+  if (log.bodyHtml) {
+    bodyEl.innerHTML = log.bodyHtml;
+  } else {
+    bodyEl.textContent = log.bodyText || '(No content recorded)';
+  }
+
+  const modalEl = document.getElementById('auditDetailModal');
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
 }

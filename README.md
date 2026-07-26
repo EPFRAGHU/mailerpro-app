@@ -36,8 +36,15 @@
 - Schedule recurring daily email dispatches at any target 24-hour execution time (e.g. `09:00`).
 - Built-in Schedule Manager to create, toggle pause/activate, or delete active campaigns.
 
-### 🖥️ 6. Real-Time Transmission Terminal & Themes
-- Live activity console tracking authentication logins, SMTP connection checks, and delivery success/failure counts.
+### 👥 7. Multi-User Team Collaboration & Role-Based Access Control (RBAC)
+- **Superadmin (Owner)**: Create, edit, and delete colleague user accounts. Set initial passwords and toggle account active/disabled states.
+- **Shared Master SMTP Key**: Colleagues send emails using the Superadmin's shared Brevo API key without needing individual Brevo accounts or API keys.
+- **Colleague Access Control**: Colleagues log in with their own office email & password, compose emails, and view their own sent logs.
+
+### 📜 8. Persistent Audit Log & Email Content Inspector
+- **Full Email Trail**: Records every sent email (`Sender`, `Recipient`, `Subject`, `HTML Body`, `Timestamp`, `Status`, `MessageId`).
+- **Date & Colleague Filtering**: Search and filter sent audit logs by date (`yyyy-mm-dd`), colleague name/email, recipient, or keyword.
+- **Modal Content Inspector**: Click **"View Email Body"** on any audit entry to inspect the exact subject, recipient, and HTML email body dispatched on that day.
 - **4 Custom Themes**: Cyber Violet, Emerald Mint, Sunset Amber, and Light Crystal.
 
 ---
