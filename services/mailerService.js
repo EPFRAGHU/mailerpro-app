@@ -86,36 +86,7 @@ async function getServerPublicIp() {
 async function testSmtpConnection(config) {
   const pass = (config.pass || '').trim();
 
-  // 1. Brevo HTTPS REST API Key (xkeysib-...)
-  if (pass.startsWith('xkeysib-')) {
-    try {
-      const res = await fetch('https://api.brevo.com/v3/account', {
-        headers: { 'api-key': pass, 'accept': 'application/json' }
-      });
-      if (res.ok) {
-        return { success: true, message: 'Brevo API Key verified successfully via HTTPS (Port 443)!' };
-      }
-      const data = await res.json().catch(() => ({}));
-      const msg = data.message || `Brevo API returned status ${res.status}`;
-      const isIpErr = msg.includes('unrecognised IP') || msg.includes('authorised_ips');
-
-      if (isIpErr) {
-        const serverIp = await getServerPublicIp();
-        return {
-          success: false,
-          ipError: true,
-          serverIp,
-          message: `${msg} | Add Railway dynamic IP ${serverIp} (or CIDR 152.55.0.0/16) at https://app.brevo.com/security/authorised_ips`
-        };
-      }
-
-      return { success: false, authError: true, message: msg };
-    } catch (err) {
-      return { success: false, message: 'Brevo API Connection Error: ' + err.message };
-    }
-  }
-
-  // 2. Resend HTTPS REST API Key (re_...)
+  // 1. Resend HTTPS REST API Key (re_...)
   if (pass.startsWith('re_')) {
     try {
       const res = await fetch('https://api.resend.com/domains', {
@@ -243,29 +214,7 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
       let info;
       const pass = (smtpConfig.pass || '').trim();
 
-      if (pass.startsWith('xkeysib-')) {
-        try {
-          info = await sendViaBrevoApi(pass, {
-            fromName,
-            fromEmail: fromEmail || smtpConfig.user,
-            to: targetEmail,
-            subject: customSubject,
-            html: customHtml,
-            text: customText
-          });
-        } catch (apiErr) {
-          if (apiErr.message.includes('unrecognised IP') || apiErr.message.includes('authorised_ips')) {
-            console.warn('[Brevo API IP Block] Brevo REST API blocked IP. Attempting automatic Nodemailer SMTP fallback...');
-            try {
-              info = await transporter.sendMail(mailOptions);
-            } catch (smtpErr) {
-              throw apiErr; // Throw original detailed Brevo IP resolution message if SMTP also fails
-            }
-          } else {
-            throw apiErr;
-          }
-        }
-      } else if (pass.startsWith('re_')) {
+      if (pass.startsWith('re_')) {
         info = await sendViaResendApi(pass, {
           fromName,
           fromEmail: fromEmail || smtpConfig.user,
@@ -275,6 +224,7 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
           text: customText
         });
       } else {
+        // Send via Nodemailer SMTP (smtp-relay.brevo.com / Gmail / Custom SMTP) - Bypasses Brevo API IP Whitelisting!
         info = await transporter.sendMail(mailOptions);
       }
 
