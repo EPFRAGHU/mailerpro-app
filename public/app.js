@@ -1409,9 +1409,12 @@ async function loadAuditLogs() {
               ${l.status}
             </span>
           </td>
-          <td class="text-end">
+          <td class="text-end text-nowrap">
+            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1 fw-semibold" onclick="reloadCampaignToComposer('${l.id}')" title="Load Subject, Body & Recipient into Composer">
+              <i class="fas fa-redo me-1"></i>Re-use
+            </button>
             <button class="btn btn-sm btn-outline-info rounded-pill px-3 fw-semibold" onclick="viewAuditDetail('${l.id}')">
-              <i class="fas fa-eye me-1"></i>View Email Body
+              <i class="fas fa-eye me-1"></i>View Body
             </button>
           </td>
         </tr>
@@ -1422,9 +1425,13 @@ async function loadAuditLogs() {
   }
 }
 
+let activeModalAuditLog = null;
+
 function viewAuditDetail(logId) {
   const log = cachedAuditLogs.find(l => l.id === logId);
   if (!log) return;
+
+  activeModalAuditLog = log;
 
   document.getElementById('audModalSender').textContent = `${log.userName} <${log.userEmail}>`;
   document.getElementById('audModalRecipient').textContent = log.toEmail;
@@ -1443,4 +1450,51 @@ function viewAuditDetail(logId) {
   const modalEl = document.getElementById('auditDetailModal');
   const modal = new bootstrap.Modal(modalEl);
   modal.show();
+}
+
+/**
+ * 1-Click Reload Past Campaign into Composer Canvas
+ */
+function reloadCampaignToComposer(logId) {
+  const log = cachedAuditLogs.find(l => l.id === logId);
+  if (!log) return;
+
+  // 1. Fill Subject Line
+  const subjectInput = document.getElementById('emailSubject');
+  if (subjectInput) subjectInput.value = log.subject || '';
+
+  // 2. Fill Email Body (HTML / Text)
+  const bodyTextarea = document.getElementById('emailBody');
+  if (bodyTextarea) bodyTextarea.value = log.bodyHtml || log.bodyText || '';
+
+  // 3. Fill From Name & Email
+  const fromNameInput = document.getElementById('fromName');
+  const fromEmailInput = document.getElementById('fromEmail');
+  if (fromNameInput && log.fromName) fromNameInput.value = log.fromName;
+  if (fromEmailInput && log.fromEmail) fromEmailInput.value = log.fromEmail;
+
+  // 4. Fill Recipient List
+  if (log.toEmail) {
+    parsedRecipients = [{ email: log.toEmail, name: log.toEmail.split('@')[0] }];
+    updateRecipientUI();
+  }
+
+  updateLivePreview();
+
+  // 5. Switch view back to Composer Tab
+  const composerTabBtn = document.getElementById('composer-tab');
+  if (composerTabBtn) {
+    const tab = new bootstrap.Tab(composerTabBtn);
+    tab.show();
+  }
+}
+
+function reloadCampaignFromModal() {
+  if (activeModalAuditLog) {
+    const modalEl = document.getElementById('auditDetailModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    reloadCampaignToComposer(activeModalAuditLog.id);
+  }
 }
