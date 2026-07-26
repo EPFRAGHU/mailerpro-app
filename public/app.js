@@ -1123,15 +1123,27 @@ async function checkAuthSession() {
 function showLoginScreen() {
   const screen = document.getElementById('loginScreen');
   const mainApp = document.getElementById('mainAppWrapper');
-  if (screen) screen.classList.remove('d-none');
-  if (mainApp) mainApp.classList.add('d-none');
+  if (screen) {
+    screen.classList.remove('d-none');
+    screen.style.setProperty('display', 'flex', 'important');
+  }
+  if (mainApp) {
+    mainApp.classList.add('d-none');
+    mainApp.style.setProperty('display', 'none', 'important');
+  }
 }
 
 function showMainApp() {
   const screen = document.getElementById('loginScreen');
   const mainApp = document.getElementById('mainAppWrapper');
-  if (screen) screen.classList.add('d-none');
-  if (mainApp) mainApp.classList.remove('d-none');
+  if (screen) {
+    screen.classList.add('d-none');
+    screen.style.setProperty('display', 'none', 'important');
+  }
+  if (mainApp) {
+    mainApp.classList.remove('d-none');
+    mainApp.style.setProperty('display', 'block', 'important');
+  }
 
   // Handle RBAC visibility for Superadmin vs Colleague
   const usersTabLi = document.getElementById('usersTabLi');
