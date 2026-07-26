@@ -177,6 +177,13 @@ async function testSmtpConnection(config) {
     return { success: false, message: hintMessage, authError: true };
   }
 
+  if (errMsg.includes('timed out')) {
+    return {
+      success: false,
+      message: `Connection Timed Out: Railway's cloud network blocks raw SMTP ports (587, 2525, 465). To send emails reliably on Railway, use a Brevo API Key (xkeysib-...) or Resend API Key (re_...) which connects instantly over Port 443 HTTPS!`
+    };
+  }
+
   return { success: false, message: lastError?.message || 'Failed to connect to SMTP server.' };
 }
 
