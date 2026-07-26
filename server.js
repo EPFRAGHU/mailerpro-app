@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const { testSmtpConnection, sendBulkEmails } = require('./services/mailerService');
+const { testSmtpConnection, sendBulkEmails, autoAuthorizeBrevoIp } = require('./services/mailerService');
 const { initScheduler, addSchedule, getSchedules, deleteSchedule, toggleSchedule, timeToCron } = require('./services/schedulerService');
 const { 
   authenticateUser, 
@@ -151,6 +151,28 @@ app.post('/api/smtp/test', async (req, res) => {
   console.log(`[SMTP Test] Provider: ${smtpConfig.provider}, User: "${smtpConfig.user}", Pass length: ${smtpConfig.pass?.length}, Prefix: "${smtpConfig.pass?.substring(0, 12)}..."`);
   const result = await testSmtpConnection(smtpConfig);
   return res.json(result);
+});
+
+// 1b. 1-Click Brevo IP Self-Authorization Endpoint
+app.post('/api/brevo/authorize-ip', async (req, res) => {
+  try {
+    const { apiKey, ip } = req.body;
+    if (!apiKey || !ip) {
+      return res.status(400).json({ success: false, message: 'Brevo API Key and IP address are required.' });
+    }
+
+    const success = await autoAuthorizeBrevoIp(apiKey, ip);
+    if (success) {
+      return res.json({ success: true, message: `IP Address ${ip} successfully authorized in your Brevo account!` });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: `Unable to auto-authorize IP via Brevo API. Please make sure to add 152.55.0.0/16 or your exact IP at https://app.brevo.com/security/authorised_ips.`
+      });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // 2. Direct Bulk Mail Dispatch (with file attachments support)

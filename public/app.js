@@ -435,19 +435,21 @@ async function testSmtp() {
       const isAuthErr = data.authError || (data.message && data.message.includes('535'));
       
       if (isIpErr) {
-        const ipToAuthorize = data.serverIp || 'your server IP';
+        const ipToAuthorize = data.serverIp || '152.55.0.0/16';
+        const brevoIpInput = document.getElementById('brevoIpInput');
+        if (brevoIpInput) {
+          brevoIpInput.value = ipToAuthorize;
+        }
+
         alertBox.innerHTML = `
           <div class="d-flex flex-column gap-1">
-            <div><i class="fas fa-shield-alt me-2"></i><strong>IP Address Not Authorized (525)</strong></div>
+            <div><i class="fas fa-shield-alt me-2"></i><strong>IP Address Restriction Detected (525)</strong></div>
             <div class="small">${data.message}</div>
             <div class="mt-2 pt-2 border-top border-danger-subtle small">
-              <strong><i class="fas fa-network-wired me-1"></i>How to Fix:</strong>
-              <ol class="mb-0 ps-3 mt-1 extra-small">
-                <li>Go to Brevo &rarr; <strong>SMTP & API</strong> &rarr; <strong>Authorized IP addresses</strong>.</li>
-                <li>Click <strong>Authorize IP address</strong> button.</li>
-                <li>Type your subnet CIDR range: <code class="user-select-all">152.55.0.0/16</code> (or exact IP <code class="user-select-all">${ipToAuthorize}</code>) and save!</li>
-                <li>Come back here and click <strong>Test Connection</strong>.</li>
-              </ol>
+              <strong><i class="fas fa-magic text-warning me-1"></i>1-Click Direct Fix (No Brevo Login Required):</strong>
+              <div class="mt-1 extra-small text-light">
+                Simply click the <strong><i class="fas fa-user-shield text-warning"></i> Authorize IP</strong> button below in your SMTP Card to automatically register IP <code class="user-select-all">${ipToAuthorize}</code> into Brevo!
+              </div>
             </div>
           </div>
         `;
@@ -500,6 +502,63 @@ async function testSmtp() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-plug me-2"></i>Test SMTP Connection';
     alertBox.classList.remove('d-none');
+  }
+}
+
+/**
+ * 1-Click Brevo IP Whitelister from MailerPro UI (No Brevo Login Required)
+ */
+async function handleQuickAuthorizeIp() {
+  const ipInput = document.getElementById('brevoIpInput');
+  const alertBox = document.getElementById('quickIpAlert');
+  const btn = document.getElementById('btnQuickAuthorizeIp');
+  const pass = document.getElementById('smtpPass').value.trim();
+
+  const ip = ipInput ? ipInput.value.trim() : '';
+
+  if (!ip) {
+    alertBox.className = 'alert alert-warning p-2 extra-small mt-2';
+    alertBox.textContent = 'Please enter an IP address or CIDR range (e.g. 152.55.0.0/16 or 152.55.177.35).';
+    alertBox.classList.remove('d-none');
+    return;
+  }
+
+  if (!pass.startsWith('xkeysib-')) {
+    alertBox.className = 'alert alert-warning p-2 extra-small mt-2';
+    alertBox.textContent = 'Auto-whitelisting requires a Brevo API key (xkeysib-...). Please switch provider to Brevo and unlock your API key.';
+    alertBox.classList.remove('d-none');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Authorizing...';
+  alertBox.classList.add('d-none');
+
+  try {
+    const res = await fetch('/api/brevo/authorize-ip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: pass, ip })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alertBox.className = 'alert alert-success p-2 extra-small mt-2';
+      alertBox.innerHTML = `<i class="fas fa-check-circle me-1"></i>${data.message}`;
+      // Re-test SMTP connection automatically after successful authorization
+      setTimeout(() => testSmtp(), 1000);
+    } else {
+      alertBox.className = 'alert alert-danger p-2 extra-small mt-2';
+      alertBox.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${data.message}`;
+    }
+    alertBox.classList.remove('d-none');
+  } catch (err) {
+    alertBox.className = 'alert alert-danger p-2 extra-small mt-2';
+    alertBox.textContent = 'Error sending authorization request: ' + err.message;
+    alertBox.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-user-shield me-1"></i>Authorize IP';
   }
 }
 

@@ -436,5 +436,6 @@ async function sendViaResendApi(apiKey, mailOptions) {
 module.exports = {
   testSmtpConnection,
   sendBulkEmails,
-  replacePlaceholders
+  replacePlaceholders,
+  autoAuthorizeBrevoIp
 };
