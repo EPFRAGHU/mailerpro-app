@@ -179,7 +179,7 @@ app.post('/api/mail/send', upload.array('attachments'), async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    const results = await sendBulkEmails(smtpConfig, emailPayload, (logEntry, currentResults) => {
+    const results = await sendBulkEmails(smtpConfig, emailPayload, async (logEntry, currentResults) => {
       addLog({
         type: 'SEND_PROGRESS',
         logEntry,
@@ -188,11 +188,11 @@ app.post('/api/mail/send', upload.array('attachments'), async (req, res) => {
         total: currentResults.total
       });
 
-      // Record in persistent Audit Store
-      addAuditLog({
+      // Record in persistent Audit Store & Supabase Cloud PostgreSQL
+      await addAuditLog({
         userId: senderUser?.id || 'usr-admin-1',
         userEmail: senderUser?.email || 'raghunatha.maharana@gmail.com',
-        userName: senderUser?.name || 'Superadmin',
+        userName: senderUser?.name || 'Superadmin (Owner)',
         fromEmail: emailPayload.fromEmail || smtpConfig.user,
         fromName: emailPayload.fromName || '',
         toEmail: logEntry.email,

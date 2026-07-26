@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 const { sendBulkEmails } = require('./mailerService');
+const { addAuditLog } = require('./auditService');
 
 const SCHEDULES_FILE = path.join(__dirname, '../data/schedules.json');
 
@@ -56,8 +57,28 @@ function registerCronJob(schedule, logCallback = () => {}) {
     logCallback({ type: 'SCHEDULE_START', scheduleId: id, name, timestamp: new Date().toISOString() });
 
     try {
-      const results = await sendBulkEmails(smtpConfig, emailPayload, (logEntry) => {
+      const results = await sendBulkEmails(smtpConfig, emailPayload, async (logEntry) => {
         logCallback({ type: 'SCHEDULE_PROGRESS', scheduleId: id, name, logEntry });
+        try {
+          await addAuditLog({
+            userId: emailPayload.senderUser?.id || 'usr-admin-1',
+            userEmail: emailPayload.senderUser?.email || 'raghunatha.maharana@gmail.com',
+            userName: emailPayload.senderUser?.name || 'Automated Scheduler',
+            fromEmail: emailPayload.fromEmail || smtpConfig.user,
+            fromName: emailPayload.fromName || '',
+            toEmail: logEntry.email,
+            subject: emailPayload.subject,
+            bodyHtml: emailPayload.bodyHtml,
+            bodyText: emailPayload.bodyText,
+            provider: smtpConfig.provider,
+            status: logEntry.status,
+            messageId: logEntry.messageId || '',
+            errorDetails: logEntry.error || '',
+            timestamp: logEntry.timestamp || new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn('[Scheduler Audit Error]:', err.message);
+        }
       });
 
       // Update schedule stats
