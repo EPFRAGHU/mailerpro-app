@@ -84,7 +84,13 @@ async function getServerPublicIp() {
  * Verifies SMTP credentials with multi-port auto-failover (587, 2525, 465).
  */
 async function testSmtpConnection(config) {
-  const portsToTry = config.provider === 'brevo' ? [587, 2525, 465] : [config.port || 587];
+  let portsToTry = [parseInt(config.port, 10) || 587];
+  if (config.provider === 'brevo') {
+    portsToTry = [465, 587, 2525]; // Lead with Port 465 SSL for cloud platform compatibility
+  } else if (config.provider === 'resend' || config.provider === 'gmail') {
+    portsToTry = [465]; // Resend and Gmail use Port 465 SSL
+  }
+
   let lastError = null;
 
   for (const p of portsToTry) {
