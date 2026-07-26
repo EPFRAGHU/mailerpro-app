@@ -1502,11 +1502,8 @@ function reloadCampaignToComposer(logId) {
     tab.show();
   }
 
-  // 6. Scroll smoothly to composer form header
-  const composerHeader = document.querySelector('.card-header-custom');
-  if (composerHeader) {
-    composerHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  // 6. Smooth scroll to top of Composer canvas
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function reloadCampaignFromModal() {
