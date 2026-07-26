@@ -160,10 +160,40 @@ async function authenticateUser(email, password) {
   return null;
 }
 
+async function syncLocalUsersToSupabase() {
+  if (!supabase) return;
+  try {
+    const { data: remoteUsers } = await supabase.from('mailer_users').select('id, email');
+    const remoteEmailMap = new Set((remoteUsers || []).map(u => u.email.toLowerCase()));
+
+    const missingUsers = store.users.filter(u => !remoteEmailMap.has(u.email.toLowerCase()));
+
+    if (missingUsers.length > 0) {
+      console.log(`[Supabase Migration] Migrating ${missingUsers.length} local colleague users to Supabase...`);
+      const rowsToInsert = missingUsers.map(u => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        password_hash: u.passwordHash,
+        role: u.role,
+        active: u.active !== false,
+        created_at: u.createdAt || new Date().toISOString()
+      }));
+
+      await supabase.from('mailer_users').insert(rowsToInsert);
+      console.log('[Supabase Migration] Colleague users migration completed successfully!');
+    }
+  } catch (err) {
+    console.warn('[Supabase Users Migration Warning]:', err.message);
+  }
+}
+
 /**
- * List all users (Superadmin only)
+ * List all users (Supabase + Local Fallback Merge)
  */
 async function getUsers() {
+  let combinedUsers = [];
+
   if (supabase) {
     try {
       const { data: users, error } = await supabase
@@ -172,7 +202,7 @@ async function getUsers() {
         .order('created_at', { ascending: false });
 
       if (!error && users) {
-        return users.map(u => ({
+        combinedUsers = users.map(u => ({
           id: u.id,
           email: u.email,
           name: u.name,
@@ -186,14 +216,22 @@ async function getUsers() {
     }
   }
 
-  return store.users.map(u => ({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    role: u.role,
-    active: u.active !== false,
-    createdAt: u.createdAt
-  }));
+  // Merge any local store users not yet in combinedUsers
+  const existingEmails = new Set(combinedUsers.map(u => u.email.toLowerCase()));
+  for (const u of store.users) {
+    if (!existingEmails.has(u.email.toLowerCase())) {
+      combinedUsers.push({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        active: u.active !== false,
+        createdAt: u.createdAt
+      });
+    }
+  }
+
+  return combinedUsers;
 }
 
 /**
@@ -410,6 +448,7 @@ function loadStore() {
   }
 
   ensureSuperadmin();
+  syncLocalUsersToSupabase();
   syncLocalLogsToSupabase();
 }
 
