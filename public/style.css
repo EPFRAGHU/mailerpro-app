@@ -396,14 +396,17 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 
 /* Glass Modal */
-.glass-modal {
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
-}
-
-[data-theme="light"] .glass-modal {
-  background: #ffffff;
+/* Login Wrapper Full Screen Overlay */
+.login-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  background: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 

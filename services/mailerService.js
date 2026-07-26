@@ -96,7 +96,20 @@ async function testSmtpConnection(config) {
         return { success: true, message: 'Brevo API Key verified successfully via HTTPS (Port 443)!' };
       }
       const data = await res.json().catch(() => ({}));
-      return { success: false, authError: true, message: data.message || `Brevo API returned status ${res.status}` };
+      const msg = data.message || `Brevo API returned status ${res.status}`;
+      const isIpErr = msg.includes('unrecognised IP') || msg.includes('authorised_ips');
+
+      if (isIpErr) {
+        const serverIp = await getServerPublicIp();
+        return {
+          success: false,
+          ipError: true,
+          serverIp,
+          message: `${msg} | Add Railway dynamic IP ${serverIp} (or CIDR 152.55.0.0/16) at https://app.brevo.com/security/authorised_ips`
+        };
+      }
+
+      return { success: false, authError: true, message: msg };
     } catch (err) {
       return { success: false, message: 'Brevo API Connection Error: ' + err.message };
     }
