@@ -358,8 +358,63 @@ async function addAuditLog(entry) {
   return log;
 }
 
+async function syncLocalLogsToSupabase() {
+  if (!supabase) return;
+  try {
+    const { count } = await supabase.from('mailer_audit_logs').select('id', { count: 'exact', head: true });
+    if ((count === 0 || count === null) && store.auditLogs.length > 0) {
+      console.log(`[Supabase Migration] Migrating ${store.auditLogs.length} local logs to Supabase...`);
+      const rowsToInsert = store.auditLogs.map(l => ({
+        id: l.id,
+        user_id: l.userId || 'usr-admin-1',
+        user_email: l.userEmail || 'raghunatha.maharana@gmail.com',
+        user_name: l.userName || 'Superadmin (Owner)',
+        from_email: l.fromEmail || '',
+        from_name: l.fromName || '',
+        to_email: l.toEmail || '',
+        subject: l.subject || '(No Subject)',
+        body_html: l.bodyHtml || '',
+        body_text: l.bodyText || '',
+        provider: l.provider || 'brevo',
+        status: l.status || 'SUCCESS',
+        message_id: l.messageId || '',
+        error_details: l.errorDetails || '',
+        timestamp: l.timestamp || new Date().toISOString()
+      }));
+
+      await supabase.from('mailer_audit_logs').insert(rowsToInsert);
+      console.log('[Supabase Migration] Audit logs migration completed successfully!');
+    }
+  } catch (err) {
+    console.warn('[Supabase Migration Warning]:', err.message);
+  }
+}
+
+function loadStore() {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const data = fs.readFileSync(STORE_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      store = {
+        users: parsed.users || [],
+        auditLogs: parsed.auditLogs || [],
+        systemConfig: Object.assign({
+          masterProvider: 'brevo',
+          masterUser: 'b32ede001@smtp-brevo.com',
+          masterPass: ''
+        }, parsed.systemConfig || {})
+      };
+    }
+  } catch (err) {
+    console.error('[AuditService] Error loading store.json:', err.message);
+  }
+
+  ensureSuperadmin();
+  syncLocalLogsToSupabase();
+}
+
 /**
- * Query Audit Logs from Supabase PostgreSQL Cloud Database
+ * Query Audit Logs from Supabase PostgreSQL Cloud Database (with local fallback)
  */
 async function getAuditLogs(options = {}) {
   const { role, userId, date, search, limit = 200 } = options;
@@ -385,7 +440,7 @@ async function getAuditLogs(options = {}) {
 
       const { data, error } = await query;
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         return data.map(l => ({
           id: l.id,
           userId: l.user_id,
@@ -409,7 +464,7 @@ async function getAuditLogs(options = {}) {
     }
   }
 
-  // Local fallback
+  // Local store fallback if Supabase returns 0 records or is initializing
   let filtered = store.auditLogs;
   if (role && role !== 'superadmin' && userId) {
     filtered = filtered.filter(l => l.userId === userId);
