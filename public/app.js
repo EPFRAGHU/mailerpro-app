@@ -62,6 +62,7 @@ function initAppComponents() {
   renderVariableChips();
   loadSchedules();
   loadLogs();
+  loadCampaignExplorer();
 
   // Automatically connect & verify SMTP on login
   autoVerifySmtp();
@@ -909,6 +910,7 @@ async function sendNow() {
       progressText.textContent = 'Bulk dispatch completed successfully!';
       alert(`Bulk Email Dispatch Complete!\n\nSent: ${data.results.sent}\nFailed: ${data.results.failed}`);
       loadLogs();
+      loadCampaignExplorer();
     } else {
       alert('Failed to send bulk email: ' + data.message);
     }
@@ -1497,4 +1499,70 @@ function reloadCampaignFromModal() {
 
     reloadCampaignToComposer(activeModalAuditLog.id);
   }
+}
+
+/**
+ * Left-Side Past Campaigns Explorer Engine
+ */
+let cachedExplorerLogs = [];
+
+async function loadCampaignExplorer() {
+  const container = document.getElementById('campaignExplorerList');
+  if (!container) return;
+
+  try {
+    const role = currentUser?.role || 'user';
+    const userId = currentUser?.id || '';
+    const res = await fetch(`/api/audit/logs?role=${role}&userId=${userId}`);
+    const data = await res.json();
+
+    if (data.success && data.logs) {
+      cachedExplorerLogs = data.logs;
+      renderCampaignExplorerList(data.logs);
+    }
+  } catch (err) {
+    container.innerHTML = `<div class="text-danger extra-small p-2">Failed to load: ${err.message}</div>`;
+  }
+}
+
+function renderCampaignExplorerList(logs) {
+  const container = document.getElementById('campaignExplorerList');
+  if (!container) return;
+
+  if (!logs || logs.length === 0) {
+    container.innerHTML = `
+      <div class="text-center text-muted py-3 extra-small">
+        <i class="fas fa-inbox fs-4 d-block mb-1 text-secondary"></i>No past campaigns found.
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = logs.map(l => `
+    <div class="campaign-item p-2 mb-2 rounded border border-secondary" onclick="reloadCampaignToComposer('${l.id}')" title="Click to load into Composer">
+      <div class="d-flex align-items-center justify-content-between mb-1">
+        <strong class="text-white extra-small text-truncate me-2" style="max-width: 170px;" title="${l.subject}">${l.subject || '(No Subject)'}</strong>
+        <span class="badge bg-dark border border-secondary text-info extra-small">${new Date(l.timestamp).toLocaleDateString()}</span>
+      </div>
+      <div class="d-flex align-items-center justify-content-between extra-small text-muted">
+        <span class="text-truncate" style="max-width: 170px;"><i class="fas fa-paper-plane me-1 text-primary"></i>${l.toEmail}</span>
+        <span class="text-cyan fw-bold"><i class="fas fa-file-import me-1"></i>Load</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCampaignExplorer() {
+  const query = (document.getElementById('campaignSearchInput')?.value || '').toLowerCase().trim();
+  if (!query) {
+    renderCampaignExplorerList(cachedExplorerLogs);
+    return;
+  }
+
+  const filtered = cachedExplorerLogs.filter(l => 
+    (l.subject && l.subject.toLowerCase().includes(query)) ||
+    (l.toEmail && l.toEmail.toLowerCase().includes(query)) ||
+    (l.userName && l.userName.toLowerCase().includes(query))
+  );
+
+  renderCampaignExplorerList(filtered);
 }

@@ -471,6 +471,33 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
   line-height: 1.6;
 }
 
+/* Past Campaigns Explorer Panel */
+.campaign-explorer-box {
+  padding-right: 4px;
+}
+
+.campaign-explorer-box::-webkit-scrollbar {
+  width: 5px;
+}
+.campaign-explorer-box::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.campaign-item {
+  transition: all 0.2s ease;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(15, 23, 42, 0.5) !important;
+  cursor: pointer;
+}
+
+.campaign-item:hover {
+  background: rgba(99, 102, 241, 0.18) !important;
+  border-color: #6366f1 !important;
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
 [data-theme="light"] .terminal-box {
   background: #0f172a;
   color: #f8fafc;

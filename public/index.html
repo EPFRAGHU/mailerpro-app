@@ -256,6 +256,26 @@
               </div>
             </div>
 
+            <!-- 3. Past Campaigns Explorer Card -->
+            <div class="glass-card mt-4">
+              <div class="card-header-custom d-flex align-items-center justify-content-between">
+                <h5 class="m-0 fw-bold"><i class="fas fa-history text-info me-2"></i>Past Campaigns Explorer</h5>
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 extra-small text-light" onclick="loadCampaignExplorer()" title="Refresh Explorer">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+              <div class="card-body-custom">
+                <div class="mb-2">
+                  <input type="text" id="campaignSearchInput" class="form-control custom-input form-control-sm" placeholder="🔍 Search past campaigns..." oninput="filterCampaignExplorer()">
+                </div>
+                <div id="campaignExplorerList" class="campaign-explorer-box" style="max-height: 280px; overflow-y: auto;">
+                  <div class="text-center text-muted py-3 small">
+                    <i class="fas fa-spinner fa-spin me-1"></i>Loading past campaigns...
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- RIGHT COLUMN: Mail Composer & Dispatch -->
