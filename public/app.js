@@ -1209,10 +1209,32 @@ async function handleLogin(event) {
   }
 }
 
+/**
+ * Reset Composer Form & Clear Recipients
+ */
+function resetComposerForm() {
+  parsedRecipients = [];
+  uploadedAttachments = [];
+  
+  const subjectInput = document.getElementById('emailSubject');
+  const bodyTextarea = document.getElementById('emailBody');
+  const fileInput = document.getElementById('attachmentInput');
+  const manualInput = document.getElementById('manualRecipientsInput');
+
+  if (subjectInput) subjectInput.value = '';
+  if (bodyTextarea) bodyTextarea.value = '';
+  if (fileInput) fileInput.value = '';
+  if (manualInput) manualInput.value = '';
+
+  updateRecipientUI();
+  updateLivePreview();
+}
+
 function handleLogout() {
   localStorage.removeItem('mailler_auth_token');
   localStorage.removeItem('mailler_auth_user');
   currentUser = null;
+  resetComposerForm();
   showLoginScreen();
 }
 
