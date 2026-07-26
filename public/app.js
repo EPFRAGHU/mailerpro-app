@@ -445,7 +445,7 @@ async function testSmtp() {
               <ol class="mb-0 ps-3 mt-1 extra-small">
                 <li>Go to Brevo &rarr; <strong>SMTP & API</strong> &rarr; <strong>Authorized IP addresses</strong>.</li>
                 <li>Click <strong>Authorize IP address</strong> button.</li>
-                <li>Type your server IP address: <code class="user-select-all">${ipToAuthorize}</code> and save!</li>
+                <li>Type your subnet CIDR range: <code class="user-select-all">152.55.0.0/16</code> (or exact IP <code class="user-select-all">${ipToAuthorize}</code>) and save!</li>
                 <li>Come back here and click <strong>Test Connection</strong>.</li>
               </ol>
             </div>
