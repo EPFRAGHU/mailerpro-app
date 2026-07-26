@@ -84,6 +84,43 @@ async function getServerPublicIp() {
  * Verifies SMTP credentials with multi-port auto-failover (587, 2525, 465).
  */
 async function testSmtpConnection(config) {
+  const pass = (config.pass || '').trim();
+
+  // 1. Brevo HTTPS REST API Key (xkeysib-...)
+  if (pass.startsWith('xkeysib-')) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/account', {
+        headers: { 'api-key': pass, 'accept': 'application/json' }
+      });
+      if (res.ok) {
+        return { success: true, message: 'Brevo API Key verified successfully via HTTPS (Port 443)!' };
+      }
+      const data = await res.json().catch(() => ({}));
+      return { success: false, authError: true, message: data.message || `Brevo API returned status ${res.status}` };
+    } catch (err) {
+      return { success: false, message: 'Brevo API Connection Error: ' + err.message };
+    }
+  }
+
+  // 2. Resend HTTPS REST API Key (re_...)
+  if (pass.startsWith('re_')) {
+    try {
+      const res = await fetch('https://api.resend.com/domains', {
+        headers: { 'Authorization': `Bearer ${pass}` }
+      });
+      if (res.status === 200 || res.status === 403) {
+        return { success: true, message: 'Resend API Key verified successfully via HTTPS (Port 443)!' };
+      }
+      if (res.status === 401) {
+        return { success: false, authError: true, message: 'Invalid Resend API Key (401 Unauthorized).' };
+      }
+      return { success: true, message: 'Resend API Key verified successfully via HTTPS (Port 443)!' };
+    } catch (err) {
+      return { success: false, message: 'Resend API Connection Error: ' + err.message };
+    }
+  }
+
+  // 3. Nodemailer SMTP Fallback
   let portsToTry = [parseInt(config.port, 10) || 587];
   if (config.provider === 'brevo') {
     portsToTry = [465, 587, 2525]; // Lead with Port 465 SSL for cloud platform compatibility
@@ -124,14 +161,14 @@ async function testSmtpConnection(config) {
       success: false,
       ipError: true,
       serverIp,
-      message: `Unauthorized IP Address (525 5.7.1): Brevo is restricting connections from your application server IP (${serverIp}).`
+      message: `Unauthorized IP Address (525 5.7.1): Brevo SMTP is restricting cloud host IP (${serverIp}). Tip: Generate a Brevo API Key (xkeysib-...) under Brevo -> SMTP & API -> API Keys to connect instantly over HTTPS!`
     };
   }
 
   if (isAuthError) {
     let hintMessage = `Invalid Login (535 Authentication Failed): The SMTP server rejected your credentials.`;
     if (config.provider === 'brevo') {
-      hintMessage += ` Please check your Brevo SMTP Login email and paste a valid non-revoked Brevo SMTP Key (starts with xsmtpsib-...).`;
+      hintMessage += ` Please check your Brevo SMTP Login email and paste a valid non-revoked Brevo SMTP Key (xsmtpsib-...) or API Key (xkeysib-...).`;
     } else if (config.provider === 'gmail') {
       hintMessage += ` For Gmail, you must use a 16-character App Password (not your regular account password).`;
     } else if (config.provider === 'resend') {
@@ -183,7 +220,31 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      let info;
+      const pass = (smtpConfig.pass || '').trim();
+
+      if (pass.startsWith('xkeysib-')) {
+        info = await sendViaBrevoApi(pass, {
+          fromName,
+          fromEmail: fromEmail || smtpConfig.user,
+          to: targetEmail,
+          subject: customSubject,
+          html: customHtml,
+          text: customText
+        });
+      } else if (pass.startsWith('re_')) {
+        info = await sendViaResendApi(pass, {
+          fromName,
+          fromEmail: fromEmail || smtpConfig.user,
+          to: targetEmail,
+          subject: customSubject,
+          html: customHtml,
+          text: customText
+        });
+      } else {
+        info = await transporter.sendMail(mailOptions);
+      }
+
       results.sent++;
       const logEntry = {
         index: i + 1,
@@ -214,6 +275,57 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
   }
 
   return results;
+}
+
+async function sendViaBrevoApi(apiKey, mailOptions) {
+  const payload = {
+    sender: { name: mailOptions.fromName || 'MailerPro', email: mailOptions.fromEmail },
+    to: [{ email: mailOptions.to }],
+    subject: mailOptions.subject,
+    htmlContent: mailOptions.html,
+    textContent: mailOptions.text
+  };
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      'accept': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (res.ok) {
+    return { messageId: data.messageId || 'brevo-api-sent' };
+  }
+  throw new Error(data.message || `Brevo API Error (${res.status})`);
+}
+
+async function sendViaResendApi(apiKey, mailOptions) {
+  const payload = {
+    from: mailOptions.fromName ? `${mailOptions.fromName} <${mailOptions.fromEmail}>` : mailOptions.fromEmail,
+    to: [mailOptions.to],
+    subject: mailOptions.subject,
+    html: mailOptions.html,
+    text: mailOptions.text
+  };
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (res.ok) {
+    return { messageId: data.id || 'resend-api-sent' };
+  }
+  throw new Error(data.message || `Resend API Error (${res.status})`);
 }
 
 module.exports = {
