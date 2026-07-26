@@ -328,7 +328,11 @@ async function sendViaBrevoApi(apiKey, mailOptions) {
   if (res.ok) {
     return { messageId: data.messageId || 'brevo-api-sent' };
   }
-  throw new Error(data.message || `Brevo API Error (${res.status})`);
+  const msg = data.message || `Brevo API Error (${res.status})`;
+  if (msg.includes('unrecognised IP') || msg.includes('authorised_ips')) {
+    throw new Error(`${msg} -> Action Needed: Open https://app.brevo.com/security/authorised_ips and delete all listed IPs so Brevo accepts dynamic cloud server requests.`);
+  }
+  throw new Error(msg);
 }
 
 async function sendViaResendApi(apiKey, mailOptions) {
