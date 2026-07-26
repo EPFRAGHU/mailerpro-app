@@ -56,9 +56,9 @@ initScheduler((event) => {
 });
 
 // --- AUTH & RBAC API ROUTES ---
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
-  const user = authenticateUser(username, password);
+  const user = await authenticateUser(username, password);
 
   if (user) {
     const token = 'session-' + user.id + '-' + Date.now();
@@ -90,42 +90,42 @@ app.post('/api/auth/verify', (req, res) => {
 });
 
 // --- USER MANAGEMENT API ROUTES (SUPERADMIN) ---
-app.get('/api/users', (req, res) => {
+app.get('/api/users', async (req, res) => {
   try {
-    const users = getUsers();
+    const users = await getUsers();
     return res.json({ success: true, users });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.post('/api/users', (req, res) => {
+app.post('/api/users', async (req, res) => {
   try {
     const { email, name, password, role } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
-    const newUser = createUser({ email, name, password, role });
+    const newUser = await createUser({ email, name, password, role });
     return res.json({ success: true, user: newUser, message: 'Colleague user account created successfully.' });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
 
-app.put('/api/users/:id', (req, res) => {
+app.put('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = updateUser(id, req.body);
+    const updated = await updateUser(id, req.body);
     return res.json({ success: true, user: updated, message: 'User updated successfully.' });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
   }
 });
 
-app.delete('/api/users/:id', (req, res) => {
+app.delete('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    deleteUser(id);
+    await deleteUser(id);
     return res.json({ success: true, message: 'User deleted successfully.' });
   } catch (err) {
     return res.status(400).json({ success: false, message: err.message });
@@ -133,10 +133,10 @@ app.delete('/api/users/:id', (req, res) => {
 });
 
 // --- AUDIT LOG EXPLORER API ROUTES ---
-app.get('/api/audit/logs', (req, res) => {
+app.get('/api/audit/logs', async (req, res) => {
   try {
     const { role, userId, date, dateFrom, dateTo, search, filterUserId } = req.query;
-    const logs = getAuditLogs({ role, userId, date, dateFrom, dateTo, search, filterUserId });
+    const logs = await getAuditLogs({ role, userId, date, dateFrom, dateTo, search, filterUserId });
     return res.json({ success: true, logs });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

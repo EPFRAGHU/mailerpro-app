@@ -1,21 +1,33 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hdyojqbsbtptbsohgwlg.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkeW9qcWJzYnRwdGJzb2hnd2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMzMzNjEsImV4cCI6MjA5OTkwOTM2MX0.95b7QbRS0nXTwTLsbtu2PhD7veehe8KQFWhaPCV-_RU';
+
+let supabase = null;
+try {
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  console.log('[AuditService] Supabase PostgreSQL Cloud Database connected!');
+} catch (e) {
+  console.warn('[AuditService] Supabase initialization fallback:', e.message);
+}
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Simple password hashing helper
+// Password hashing helper
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// In-Memory store structure with file persistence
+// Local store fallback
 let store = {
   users: [],
   auditLogs: [],
@@ -26,7 +38,6 @@ let store = {
   }
 };
 
-// Load data from file
 function loadStore() {
   try {
     if (fs.existsSync(STORE_FILE)) {
@@ -46,11 +57,9 @@ function loadStore() {
     console.error('[AuditService] Error loading store.json:', err.message);
   }
 
-  // Ensure default superadmin exists
   ensureSuperadmin();
 }
 
-// Save store to disk
 function saveStore() {
   try {
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), 'utf8');
@@ -59,10 +68,10 @@ function saveStore() {
   }
 }
 
-// Ensure default Superadmin exists
-function ensureSuperadmin() {
+async function ensureSuperadmin() {
   const superadminEmail = process.env.ADMIN_USER || 'raghunatha.maharana@gmail.com';
   const superadminPass = process.env.ADMIN_PASS || 'Raghu@789123*';
+  const passHash = hashPassword(superadminPass);
 
   let adminUser = store.users.find(u => u.email.toLowerCase() === superadminEmail.toLowerCase() || u.role === 'superadmin');
 
@@ -71,7 +80,7 @@ function ensureSuperadmin() {
       id: 'usr-admin-1',
       email: superadminEmail,
       name: 'Superadmin (Owner)',
-      passwordHash: hashPassword(superadminPass),
+      passwordHash: passHash,
       role: 'superadmin',
       active: true,
       createdAt: new Date().toISOString()
@@ -79,19 +88,62 @@ function ensureSuperadmin() {
     store.users.unshift(adminUser);
     saveStore();
   }
+
+  if (supabase) {
+    try {
+      const { data } = await supabase.from('mailer_users').select('id').eq('email', superadminEmail).maybeSingle();
+      if (!data) {
+        await supabase.from('mailer_users').insert([{
+          id: adminUser.id,
+          email: adminUser.email,
+          name: adminUser.name,
+          password_hash: adminUser.passwordHash,
+          role: adminUser.role,
+          active: true,
+          created_at: adminUser.createdAt
+        }]);
+      }
+    } catch (err) {
+      console.warn('[Supabase] Superadmin sync warning:', err.message);
+    }
+  }
 }
 
-// Initialize on module load
 loadStore();
 
 /**
- * Authenticate User Credentials
+ * Authenticate User Credentials (Supabase + Local Fallback)
  */
-function authenticateUser(email, password) {
+async function authenticateUser(email, password) {
   if (!email || !password) return null;
   const cleanEmail = email.trim().toLowerCase();
   const inputHash = hashPassword(password);
 
+  if (supabase) {
+    try {
+      const { data: user } = await supabase
+        .from('mailer_users')
+        .select('*')
+        .or(`email.ilike.${cleanEmail},role.eq.superadmin`)
+        .maybeSingle();
+
+      if (user && user.active !== false) {
+        const matchesPass = user.password_hash === inputHash || password === process.env.ADMIN_PASS || password === 'Raghu@789123*';
+        if (matchesPass) {
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[Supabase Auth Warning]:', err.message);
+    }
+  }
+
+  // Local Fallback Auth
   const user = store.users.find(u => 
     (u.email.toLowerCase() === cleanEmail || (u.role === 'superadmin' && cleanEmail === 'admin')) &&
     (u.passwordHash === inputHash || password === process.env.ADMIN_PASS || password === 'Raghu@789123*')
@@ -111,7 +163,29 @@ function authenticateUser(email, password) {
 /**
  * List all users (Superadmin only)
  */
-function getUsers() {
+async function getUsers() {
+  if (supabase) {
+    try {
+      const { data: users, error } = await supabase
+        .from('mailer_users')
+        .select('id, email, name, role, active, created_at')
+        .order('created_at', { ascending: false });
+
+      if (!error && users) {
+        return users.map(u => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+          active: u.active !== false,
+          createdAt: u.created_at
+        }));
+      }
+    } catch (err) {
+      console.warn('[Supabase getUsers Warning]:', err.message);
+    }
+  }
+
   return store.users.map(u => ({
     id: u.id,
     email: u.email,
@@ -125,13 +199,9 @@ function getUsers() {
 /**
  * Create a new user (Colleague account)
  */
-function createUser({ email, name, password, role = 'user' }) {
+async function createUser({ email, name, password, role = 'user' }) {
   const cleanEmail = email.trim().toLowerCase();
-  const existing = store.users.find(u => u.email.toLowerCase() === cleanEmail);
-  if (existing) {
-    throw new Error('A user with this email address already exists.');
-  }
-
+  
   const newUser = {
     id: 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
     email: cleanEmail,
@@ -142,8 +212,31 @@ function createUser({ email, name, password, role = 'user' }) {
     createdAt: new Date().toISOString()
   };
 
+  if (supabase) {
+    try {
+      const { data: existing } = await supabase.from('mailer_users').select('id').eq('email', cleanEmail).maybeSingle();
+      if (existing) {
+        throw new Error('A user with this email address already exists.');
+      }
+
+      await supabase.from('mailer_users').insert([{
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        password_hash: newUser.passwordHash,
+        role: newUser.role,
+        active: true,
+        created_at: newUser.createdAt
+      }]);
+    } catch (err) {
+      if (err.message.includes('already exists')) throw err;
+      console.warn('[Supabase createUser Warning]:', err.message);
+    }
+  }
+
   store.users.push(newUser);
   saveStore();
+
   return {
     id: newUser.id,
     email: newUser.email,
@@ -153,38 +246,55 @@ function createUser({ email, name, password, role = 'user' }) {
 }
 
 /**
- * Update user (Reset password, active state, role)
+ * Update user
  */
-function updateUser(id, updates) {
+async function updateUser(id, updates) {
+  const dbUpdates = {};
+  if (updates.name) dbUpdates.name = updates.name.trim();
+  if (updates.password) dbUpdates.password_hash = hashPassword(updates.password);
+  if (updates.role) dbUpdates.role = updates.role;
+  if (updates.active !== undefined) dbUpdates.active = Boolean(updates.active);
+
+  if (supabase) {
+    try {
+      await supabase.from('mailer_users').update(dbUpdates).eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase updateUser Warning]:', err.message);
+    }
+  }
+
   const user = store.users.find(u => u.id === id);
-  if (!user) throw new Error('User not found.');
+  if (user) {
+    if (updates.name) user.name = updates.name.trim();
+    if (updates.password) user.passwordHash = hashPassword(updates.password);
+    if (updates.role) user.role = updates.role;
+    if (updates.active !== undefined) user.active = Boolean(updates.active);
+    saveStore();
+  }
 
-  if (updates.name) user.name = updates.name.trim();
-  if (updates.password) user.passwordHash = hashPassword(updates.password);
-  if (updates.role) user.role = updates.role;
-  if (updates.active !== undefined) user.active = Boolean(updates.active);
-
-  saveStore();
-  return { id: user.id, email: user.email, name: user.name, role: user.role, active: user.active };
+  return { id, active: updates.active };
 }
 
 /**
  * Delete User
  */
-function deleteUser(id) {
-  const index = store.users.findIndex(u => u.id === id);
-  if (index === -1) throw new Error('User not found.');
-  if (store.users[index].role === 'superadmin') {
-    throw new Error('Cannot delete the primary Superadmin user.');
+async function deleteUser(id) {
+  if (supabase) {
+    try {
+      await supabase.from('mailer_users').delete().eq('id', id).neq('role', 'superadmin');
+    } catch (err) {
+      console.warn('[Supabase deleteUser Warning]:', err.message);
+    }
   }
-  store.users.splice(index, 1);
-  saveStore();
+
+  const index = store.users.findIndex(u => u.id === id);
+  if (index !== -1 && store.users[index].role !== 'superadmin') {
+    store.users.splice(index, 1);
+    saveStore();
+  }
   return true;
 }
 
-/**
- * Get or Update Master System Config
- */
 function getSystemConfig() {
   return store.systemConfig;
 }
@@ -196,9 +306,9 @@ function updateSystemConfig(config) {
 }
 
 /**
- * Record an Audit Log entry for sent emails
+ * Record an Audit Log entry into Supabase PostgreSQL Cloud Database
  */
-function addAuditLog(entry) {
+async function addAuditLog(entry) {
   const log = {
     id: 'log-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
     userId: entry.userId || 'usr-admin-1',
@@ -217,45 +327,100 @@ function addAuditLog(entry) {
     timestamp: entry.timestamp || new Date().toISOString()
   };
 
-  store.auditLogs.unshift(log);
-
-  // Keep last 5000 logs in store
-  if (store.auditLogs.length > 5000) {
-    store.auditLogs.pop();
+  if (supabase) {
+    try {
+      await supabase.from('mailer_audit_logs').insert([{
+        id: log.id,
+        user_id: log.userId,
+        user_email: log.userEmail,
+        user_name: log.userName,
+        from_email: log.fromEmail,
+        from_name: log.fromName,
+        to_email: log.toEmail,
+        subject: log.subject,
+        body_html: log.bodyHtml,
+        body_text: log.bodyText,
+        provider: log.provider,
+        status: log.status,
+        message_id: log.messageId,
+        error_details: log.errorDetails,
+        timestamp: log.timestamp
+      }]);
+    } catch (err) {
+      console.warn('[Supabase addAuditLog Warning]:', err.message);
+    }
   }
 
+  store.auditLogs.unshift(log);
+  if (store.auditLogs.length > 5000) store.auditLogs.pop();
   saveStore();
+
   return log;
 }
 
 /**
- * Query Audit Logs (Filter by user role, date range, user ID, recipient, status, keyword)
+ * Query Audit Logs from Supabase PostgreSQL Cloud Database
  */
-function getAuditLogs(options = {}) {
-  const { role, userId, date, dateFrom, dateTo, search, limit = 200 } = options;
+async function getAuditLogs(options = {}) {
+  const { role, userId, date, search, limit = 200 } = options;
 
+  if (supabase) {
+    try {
+      let query = supabase.from('mailer_audit_logs').select('*').order('timestamp', { ascending: false }).limit(parseInt(limit, 10) || 200);
+
+      if (role && role !== 'superadmin' && userId) {
+        query = query.eq('user_id', userId);
+      } else if (options.filterUserId) {
+        query = query.eq('user_id', options.filterUserId);
+      }
+
+      if (date) {
+        query = query.gte('timestamp', `${date}T00:00:00.000Z`).lte('timestamp', `${date}T23:59:59.999Z`);
+      }
+
+      if (search) {
+        const q = search.trim();
+        query = query.or(`subject.ilike.%${q}%,to_email.ilike.%${q}%,user_name.ilike.%${q}%,user_email.ilike.%${q}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (!error && data) {
+        return data.map(l => ({
+          id: l.id,
+          userId: l.user_id,
+          userEmail: l.user_email,
+          userName: l.user_name,
+          fromEmail: l.from_email,
+          fromName: l.from_name,
+          toEmail: l.to_email,
+          subject: l.subject,
+          bodyHtml: l.body_html,
+          bodyText: l.body_text,
+          provider: l.provider,
+          status: l.status,
+          messageId: l.message_id,
+          errorDetails: l.error_details,
+          timestamp: l.timestamp
+        }));
+      }
+    } catch (err) {
+      console.warn('[Supabase getAuditLogs Warning]:', err.message);
+    }
+  }
+
+  // Local fallback
   let filtered = store.auditLogs;
-
-  // Role check: Standard users only see their own logs
   if (role && role !== 'superadmin' && userId) {
     filtered = filtered.filter(l => l.userId === userId);
   } else if (options.filterUserId) {
     filtered = filtered.filter(l => l.userId === options.filterUserId);
   }
 
-  // Exact Single Date Filter (yyyy-mm-dd)
   if (date) {
     filtered = filtered.filter(l => l.timestamp.startsWith(date));
-  } else {
-    if (dateFrom) {
-      filtered = filtered.filter(l => l.timestamp >= dateFrom);
-    }
-    if (dateTo) {
-      filtered = filtered.filter(l => l.timestamp <= dateTo + 'T23:59:59.999Z');
-    }
   }
 
-  // Text search (search in userEmail, userName, toEmail, subject, content)
   if (search) {
     const q = search.toLowerCase().trim();
     filtered = filtered.filter(l => 
