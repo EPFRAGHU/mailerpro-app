@@ -244,14 +244,27 @@ async function sendBulkEmails(smtpConfig, emailPayload, onProgress = () => {}) {
       const pass = (smtpConfig.pass || '').trim();
 
       if (pass.startsWith('xkeysib-')) {
-        info = await sendViaBrevoApi(pass, {
-          fromName,
-          fromEmail: fromEmail || smtpConfig.user,
-          to: targetEmail,
-          subject: customSubject,
-          html: customHtml,
-          text: customText
-        });
+        try {
+          info = await sendViaBrevoApi(pass, {
+            fromName,
+            fromEmail: fromEmail || smtpConfig.user,
+            to: targetEmail,
+            subject: customSubject,
+            html: customHtml,
+            text: customText
+          });
+        } catch (apiErr) {
+          if (apiErr.message.includes('unrecognised IP') || apiErr.message.includes('authorised_ips')) {
+            console.warn('[Brevo API IP Block] Brevo REST API blocked IP. Attempting automatic Nodemailer SMTP fallback...');
+            try {
+              info = await transporter.sendMail(mailOptions);
+            } catch (smtpErr) {
+              throw apiErr; // Throw original detailed Brevo IP resolution message if SMTP also fails
+            }
+          } else {
+            throw apiErr;
+          }
+        }
       } else if (pass.startsWith('re_')) {
         info = await sendViaResendApi(pass, {
           fromName,
